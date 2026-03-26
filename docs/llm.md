@@ -11,6 +11,10 @@ Current high-level status:
   - `Google Ads`
 - weekly and monthly ingestion are working
 - Google Sheets target sync is working
+- dashboard view switching has been stabilized with:
+  - a short server-side snapshot cache
+  - cache invalidation on ingest/target sync
+  - a Vercel preferred-region pin closer to Supabase
 - deferred sections are still:
   - `Organic Website`
   - `Insta Ads`
@@ -25,3 +29,4 @@ Default assumptions:
 - formulas belong in the app, not Zapier
 - only the approved v1 scope should be treated as finalized
 - production changes should preserve the current live behavior unless the user explicitly requests a change
+- if the dashboard shows a connection problem, treat it as a real runtime data issue, not a fake preview-mode fallback

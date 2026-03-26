@@ -64,6 +64,8 @@ What is already working:
 - live Zapier ingestion into production
 - live Google target sync into production
 - production dashboard displays active metrics and targets correctly
+- dashboard view switching is stabilized with a short server-side snapshot cache
+- dashboard cache is invalidated after ingest and target sync so fresh data appears quickly
 
 What is not done yet:
 - scheduled/fully real Zapier source mappings beyond the current validated test payloads
@@ -104,6 +106,7 @@ If the user changes business logic, update these docs first or immediately after
 - server page entry
 - loads dashboard snapshot
 - passes data to the main dashboard view
+- treats dashboard fetch failures as real connection/runtime issues instead of silently falling back to fake preview mode
 
 `app/login/page.tsx`
 - login screen
@@ -146,6 +149,7 @@ If the user changes business logic, update these docs first or immediately after
 - reads from Prisma
 - builds grouped dashboard snapshot data
 - computes approved metrics from raw observations at read time
+- caches dashboard snapshots briefly to reduce repeated Supabase reads during week/month/year switches
 
 `lib/metric-calculations.ts`
 - central business logic for approved app-side formulas
@@ -216,6 +220,7 @@ Practical note:
 - `DATABASE_URL` and `DIRECT_URL` may both point to the session pooler in local development here
 - The production deployment is on Vercel and has been verified live
 - The stable production URL in the current setup is `https://the-dashboard-theta.vercel.app`
+- The main dashboard routes are pinned to Vercel region `hnd1` to reduce latency to the Supabase project
 
 ### Period model
 
@@ -226,6 +231,10 @@ The active implementation now supports:
 
 For the approved scope, Zapier should send raw observations with the intended `timegrain`.
 The app then calculates the derived dashboard metrics from those raw observations.
+
+Practical note:
+- switching between `WEEK`, `MONTH`, and `YEAR` still triggers fresh dashboard reads, but those reads are now protected by a short cache
+- if the UI shows a connection issue, treat it as a real runtime/data-access problem, not a preview-mode fallback
 
 ### Targets sheet
 
