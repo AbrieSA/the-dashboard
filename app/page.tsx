@@ -1,5 +1,6 @@
 import { DashboardView } from "@/components/DashboardView";
 import { getDashboardSnapshot } from "@/lib/dashboard";
+import type { DashboardGroupView, DashboardRuntimeStatus } from "@/lib/dashboard-types";
 import { dashboardQuerySchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -14,13 +15,28 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     timegrain: params.timegrain,
     asOf: params.asOf,
   });
-  const groups = await getDashboardSnapshot(query).catch(() => null);
+  let groups: DashboardGroupView[] = [];
+  let runtimeStatus: DashboardRuntimeStatus = "live";
+  let runtimeMessage: string | null = null;
+
+  try {
+    groups = await getDashboardSnapshot(query);
+  } catch (error) {
+    runtimeStatus = "error";
+    runtimeMessage = "Live data is temporarily unavailable. Refresh in a few seconds to retry.";
+    console.error("Dashboard snapshot failed", {
+      timegrain: query.timegrain,
+      asOf: query.asOf ?? null,
+      error,
+    });
+  }
 
   return (
     <DashboardView
-      groups={groups ?? []}
+      groups={groups}
       timegrain={query.timegrain}
-      databaseUnavailable={groups === null}
+      runtimeStatus={runtimeStatus}
+      runtimeMessage={runtimeMessage}
     />
   );
 }

@@ -24,3 +24,5 @@ export type DashboardGroupView = {
   description: string | null;
   metrics: DashboardMetricView[];
 };
+
+export type DashboardRuntimeStatus = "live" | "error";

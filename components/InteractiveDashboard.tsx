@@ -13,13 +13,18 @@ import {
 } from "lucide-react";
 
 import { MetricCard } from "@/components/MetricCard";
-import type { DashboardGroupView, DashboardMetricView } from "@/lib/dashboard-types";
+import type {
+  DashboardGroupView,
+  DashboardMetricView,
+  DashboardRuntimeStatus,
+} from "@/lib/dashboard-types";
 import { formatDelta, formatMetricValue } from "@/lib/format";
 import { getMetricStatus } from "@/lib/metric-status";
 
 type InteractiveDashboardProps = {
   groups: DashboardGroupView[];
-  databaseUnavailable?: boolean;
+  runtimeStatus?: DashboardRuntimeStatus;
+  runtimeMessage?: string | null;
 };
 
 type DashboardTab = "summary" | "follow_up_health" | "prospect_source_health" | "website_health";
@@ -83,8 +88,10 @@ function getGroupIcon(groupKey: string) {
 
 export function InteractiveDashboard({
   groups,
-  databaseUnavailable = false,
+  runtimeStatus = "live",
+  runtimeMessage = null,
 }: InteractiveDashboardProps) {
+  const hasRuntimeError = runtimeStatus === "error";
   const [activeTab, setActiveTab] = useState<DashboardTab>("summary");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
@@ -103,7 +110,7 @@ export function InteractiveDashboard({
           matchesSearch(metric, deferredSearch) && metricMatchesStatus(metric, statusFilter),
       ),
     }))
-    .filter((group) => group.metrics.length > 0 || databaseUnavailable);
+    .filter((group) => group.metrics.length > 0 || hasRuntimeError);
 
   const visibleMetrics = visibleGroups.flatMap((group) => group.metrics);
   const effectiveSelectedMetricKey =
@@ -191,7 +198,7 @@ export function InteractiveDashboard({
         </div>
       </section>
 
-      {!databaseUnavailable && selectedMetric ? (
+      {!hasRuntimeError && selectedMetric ? (
         <section className="detail-panel">
           <div className="detail-copy">
             <p className="pill">Selected Metric</p>
@@ -235,18 +242,18 @@ export function InteractiveDashboard({
       ) : null}
 
       <section className="group-grid">
-        {databaseUnavailable ? (
+        {hasRuntimeError ? (
           <div className="empty-state">
             <ShieldCheck size={18} />
-            <h2>Database not connected yet</h2>
+            <h2>Live data is temporarily unavailable</h2>
             <p>
-              The UI is live, but Postgres is not configured on this machine yet. Add a real
-              `DATABASE_URL`, then run Prisma deploy and seed to load the dashboard data.
+              {runtimeMessage ??
+                "The dashboard could not reach Supabase for this request. Refresh to retry."}
             </p>
           </div>
         ) : null}
 
-        {!databaseUnavailable && groups.length === 0 ? (
+        {!hasRuntimeError && groups.length === 0 ? (
           <div className="empty-state">
             <ShieldCheck size={18} />
             <h2>No metric definitions found</h2>
@@ -254,7 +261,7 @@ export function InteractiveDashboard({
           </div>
         ) : null}
 
-        {!databaseUnavailable && groups.length > 0 && visibleGroups.length === 0 ? (
+        {!hasRuntimeError && groups.length > 0 && visibleGroups.length === 0 ? (
           <div className="empty-state">
             <ShieldCheck size={18} />
             <h2>No metrics match this filter</h2>

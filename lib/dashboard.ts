@@ -19,21 +19,45 @@ function decimalToNumber(value: Prisma.Decimal | null) {
   return value ? Number(value) : null;
 }
 
-async function getActiveTargets(metricDefinitionId: string, end: Date) {
+async function getActiveTargetsByMetric(metricDefinitionIds: string[], end: Date) {
   const targets = await prisma.metricTarget.findMany({
     where: {
-      metricDefinitionId,
+      metricDefinitionId: {
+        in: metricDefinitionIds,
+      },
       effectiveFrom: { lte: end },
       OR: [{ effectiveTo: null }, { effectiveTo: { gte: end } }],
     },
-    orderBy: { effectiveFrom: "desc" },
+    orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }],
   });
 
-  return {
-    current: decimalToNumber(targets.find((item) => item.targetType === "CURRENT")?.targetValue ?? null),
-    standard: decimalToNumber(targets.find((item) => item.targetType === "STANDARD")?.targetValue ?? null),
-    desired: decimalToNumber(targets.find((item) => item.targetType === "DESIRED")?.targetValue ?? null),
-  };
+  const targetsByMetricId = new Map<string, typeof targets>();
+  for (const target of targets) {
+    const existing = targetsByMetricId.get(target.metricDefinitionId) ?? [];
+    existing.push(target);
+    targetsByMetricId.set(target.metricDefinitionId, existing);
+  }
+
+  return new Map(
+    metricDefinitionIds.map((metricDefinitionId) => {
+      const metricTargets = targetsByMetricId.get(metricDefinitionId) ?? [];
+
+      return [
+        metricDefinitionId,
+        {
+          current: decimalToNumber(
+            metricTargets.find((item) => item.targetType === "CURRENT")?.targetValue ?? null,
+          ),
+          standard: decimalToNumber(
+            metricTargets.find((item) => item.targetType === "STANDARD")?.targetValue ?? null,
+          ),
+          desired: decimalToNumber(
+            metricTargets.find((item) => item.targetType === "DESIRED")?.targetValue ?? null,
+          ),
+        },
+      ];
+    }),
+  );
 }
 
 function buildObservationsByKey(
@@ -71,6 +95,7 @@ export async function getDashboardSnapshot(query: DashboardQuery): Promise<Dashb
   });
 
   const activeMetricKeys = groups.flatMap((group) => group.metrics.map((metric) => metric.key));
+  const activeMetricDefinitionIds = groups.flatMap((group) => group.metrics.map((metric) => metric.id));
   const dependencyKeys = getCalculationDependencyKeys(activeMetricKeys);
 
   const sourceDefinitions = await prisma.metricDefinition.findMany({
@@ -91,6 +116,7 @@ export async function getDashboardSnapshot(query: DashboardQuery): Promise<Dashb
   });
 
   const observationsByKey = buildObservationsByKey(sourceDefinitions);
+  const activeTargetsByMetricId = await getActiveTargetsByMetric(activeMetricDefinitionIds, window.currentEnd);
 
   return Promise.all(
     groups.map(async (group) => ({
@@ -107,7 +133,11 @@ export async function getDashboardSnapshot(query: DashboardQuery): Promise<Dashb
             start: window.previousStart,
             end: window.previousEnd,
           });
-          const targets = await getActiveTargets(metric.id, window.currentEnd);
+          const targets = activeTargetsByMetricId.get(metric.id) ?? {
+            current: null,
+            standard: null,
+            desired: null,
+          };
 
           return {
             key: metric.key,

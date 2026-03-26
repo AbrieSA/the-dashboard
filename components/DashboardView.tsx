@@ -1,17 +1,24 @@
 import Link from "next/link";
-import { Activity, BarChart3, Database, Globe2, Layers3 } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Database, Layers3 } from "lucide-react";
 
 import { logoutAction } from "@/app/actions";
 import { InteractiveDashboard } from "@/components/InteractiveDashboard";
-import { type DashboardGroupView } from "@/lib/dashboard-types";
+import { type DashboardGroupView, type DashboardRuntimeStatus } from "@/lib/dashboard-types";
 
 type DashboardViewProps = {
   groups: DashboardGroupView[];
   timegrain: "WEEK" | "MONTH" | "YEAR";
-  databaseUnavailable?: boolean;
+  runtimeStatus?: DashboardRuntimeStatus;
+  runtimeMessage?: string | null;
 };
 
-export function DashboardView({ groups, timegrain, databaseUnavailable = false }: DashboardViewProps) {
+export function DashboardView({
+  groups,
+  timegrain,
+  runtimeStatus = "live",
+  runtimeMessage = null,
+}: DashboardViewProps) {
+  const hasRuntimeError = runtimeStatus === "error";
   const totalMetrics = groups.reduce((sum, group) => sum + group.metrics.length, 0);
   const metricsWithData = groups.reduce(
     (sum, group) => sum + group.metrics.filter((metric) => metric.latestValue !== null).length,
@@ -30,9 +37,9 @@ export function DashboardView({ groups, timegrain, databaseUnavailable = false }
         </div>
 
         <div className="header-right">
-          <div className={`status-pill ${databaseUnavailable ? "amber" : "green"}`}>
+          <div className={`status-pill ${hasRuntimeError ? "amber" : "green"}`}>
             <span className="pulse" />
-            {databaseUnavailable ? "Preview Mode" : "Supabase Connected"}
+            {hasRuntimeError ? "Connection Issue" : "Supabase Connected"}
           </div>
           <div className="toolbar">
             <Link className={timegrain === "WEEK" ? "button" : "button-secondary"} href="/?timegrain=WEEK">
@@ -109,15 +116,15 @@ export function DashboardView({ groups, timegrain, databaseUnavailable = false }
             <div className="summary-top">
               <div>
                 <div className="summary-label">Runtime Status</div>
-                <div className="summary-value">{databaseUnavailable ? "Preview" : "Live"}</div>
+                <div className="summary-value">{hasRuntimeError ? "Retry" : "Live"}</div>
               </div>
               <div className="summary-icon amber">
-                {databaseUnavailable ? <Globe2 size={18} /> : <Database size={18} />}
+                {hasRuntimeError ? <AlertTriangle size={18} /> : <Database size={18} />}
               </div>
             </div>
             <div className="summary-foot">
-              {databaseUnavailable
-                ? "App is rendering without a working database connection"
+              {hasRuntimeError
+                ? runtimeMessage ?? "The last live data request failed. Refresh to retry."
                 : "Dashboard is reading from the connected Supabase database"}
             </div>
           </article>
@@ -138,7 +145,11 @@ export function DashboardView({ groups, timegrain, databaseUnavailable = false }
           </article>
         </section>
 
-        <InteractiveDashboard groups={groups} databaseUnavailable={databaseUnavailable} />
+        <InteractiveDashboard
+          groups={groups}
+          runtimeStatus={runtimeStatus}
+          runtimeMessage={runtimeMessage}
+        />
       </div>
     </main>
   );
