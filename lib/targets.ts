@@ -5,37 +5,46 @@ import { fetchTargetRows } from "@/lib/sheets";
 export async function syncTargetsFromGoogleSheet(url: string) {
   const rows = await fetchTargetRows(url);
   const now = new Date();
-
-  return prisma.$transaction(async (tx) => {
-    let synced = 0;
-
-    for (const row of rows) {
-      const definition = await tx.metricDefinition.findUnique({
-        where: { key: row.metricKey },
-      });
-
-      if (!definition) {
-        continue;
+  const metricKeys = [...new Set(rows.map((row) => row.metricKey))];
+  const definitions = await prisma.metricDefinition.findMany({
+    where: {
+      key: {
+        in: metricKeys,
+      },
+    },
+    select: {
+      id: true,
+      key: true,
+    },
+  });
+  const definitionByKey = new Map(definitions.map((definition) => [definition.key, definition.id]));
+  const targetRows = rows
+    .map((row) => {
+      const metricDefinitionId = definitionByKey.get(row.metricKey);
+      if (!metricDefinitionId) {
+        return null;
       }
 
-      await tx.metricTarget.create({
-        data: {
-          metricDefinitionId: definition.id,
-          targetType: row.targetType as TargetType,
-          targetValue: row.targetValue,
-          effectiveFrom: new Date(`${row.effectiveFrom}T00:00:00.000Z`),
-          effectiveTo: row.effectiveTo ? new Date(`${row.effectiveTo}T23:59:59.999Z`) : null,
-          notes: row.notes,
-          sourceSystem: SourceSystem.GOOGLE_SHEETS,
-        },
-      });
+      return {
+        metricDefinitionId,
+        targetType: row.targetType as TargetType,
+        targetValue: row.targetValue,
+        effectiveFrom: new Date(`${row.effectiveFrom}T00:00:00.000Z`),
+        effectiveTo: row.effectiveTo ? new Date(`${row.effectiveTo}T23:59:59.999Z`) : null,
+        notes: row.notes,
+        sourceSystem: SourceSystem.GOOGLE_SHEETS,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
 
-      synced += 1;
-    }
+  if (targetRows.length > 0) {
+    await prisma.metricTarget.createMany({
+      data: targetRows,
+    });
+  }
 
-    return {
-      synced,
-      syncedAt: now.toISOString(),
-    };
-  });
+  return {
+    synced: targetRows.length,
+    syncedAt: now.toISOString(),
+  };
 }
