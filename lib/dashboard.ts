@@ -1,5 +1,10 @@
+import { unstable_cache } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  DASHBOARD_CACHE_REVALIDATE_SECONDS,
+  DASHBOARD_CACHE_TAG,
+} from "@/lib/deployment";
 import type { DashboardGroupView } from "@/lib/dashboard-types";
 import {
   buildMetricSparkline,
@@ -82,7 +87,7 @@ function buildObservationsByKey(
   );
 }
 
-export async function getDashboardSnapshot(query: DashboardQuery): Promise<DashboardGroupView[]> {
+async function getDashboardSnapshotUncached(query: DashboardQuery): Promise<DashboardGroupView[]> {
   const window = getTimeWindow(query.timegrain, query.asOf);
   const groups = await prisma.dashboardGroup.findMany({
     orderBy: { sortOrder: "asc" },
@@ -165,4 +170,18 @@ export async function getDashboardSnapshot(query: DashboardQuery): Promise<Dashb
       ),
     })),
   );
+}
+
+const getCachedDashboardSnapshot = unstable_cache(
+  async (timegrain: DashboardQuery["timegrain"], asOf?: string) =>
+    getDashboardSnapshotUncached({ timegrain, asOf }),
+  [DASHBOARD_CACHE_TAG],
+  {
+    revalidate: DASHBOARD_CACHE_REVALIDATE_SECONDS,
+    tags: [DASHBOARD_CACHE_TAG],
+  },
+);
+
+export async function getDashboardSnapshot(query: DashboardQuery): Promise<DashboardGroupView[]> {
+  return getCachedDashboardSnapshot(query.timegrain, query.asOf);
 }

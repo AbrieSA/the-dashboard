@@ -4,6 +4,7 @@ import type { DashboardGroupView, DashboardRuntimeStatus } from "@/lib/dashboard
 import { dashboardQuerySchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
+export const preferredRegion = "hnd1";
 
 type HomePageProps = {
   searchParams: Promise<{ timegrain?: string; asOf?: string }>;

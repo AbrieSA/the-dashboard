@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: "Internal marketing and sales operations dashboard.",
 };
 
+export const preferredRegion = "hnd1";
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">

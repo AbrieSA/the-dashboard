@@ -1,9 +1,13 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { Prisma, SourceRunStatus, Timegrain } from "@prisma/client";
+import { DASHBOARD_CACHE_TAG } from "@/lib/deployment";
 import { getEnv } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { ingestionPayloadSchema } from "@/lib/validation";
+
+export const preferredRegion = "hnd1";
 
 export async function POST(request: Request) {
   const apiKey = request.headers.get("x-api-key");
@@ -99,6 +103,8 @@ export async function POST(request: Request) {
 
     return completed;
   });
+
+  revalidateTag(DASHBOARD_CACHE_TAG, "max");
 
   return NextResponse.json({
     ok: true,
