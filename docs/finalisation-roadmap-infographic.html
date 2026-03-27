@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Finalisation Roadmap</title>
+    <style>
+        :root {
+            --bg: #eef3f8;
+            --panel: #ffffff;
+            --ink: #10213b;
+            --muted: #5f708c;
+            --line: #d9e3f0;
+            --blue: #3d73ff;
+            --blue-soft: #e9f0ff;
+            --green: #1f9d68;
+            --green-soft: #e7f8f0;
+            --amber: #b7791f;
+            --amber-soft: #fff5e5;
+            --rose: #c4415e;
+            --rose-soft: #ffe9ee;
+            --shadow: 0 22px 50px rgba(16, 33, 59, 0.09);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background:
+                radial-gradient(circle at top left, #ffffff 0, #f6f9fc 24%, transparent 40%),
+                linear-gradient(180deg, #f7fafc 0%, var(--bg) 100%);
+            color: var(--ink);
+            padding: 32px;
+        }
+
+        .canvas {
+            max-width: 1380px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(217, 227, 240, 0.8);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            backdrop-filter: blur(8px);
+        }
+
+        .hero {
+            padding: 36px 40px 24px;
+            background:
+                linear-gradient(135deg, #10213b 0%, #1c3764 58%, #2c5aac 100%);
+            color: #ffffff;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr;
+            gap: 28px;
+            align-items: end;
+            margin-top: 18px;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 40px;
+            line-height: 1.08;
+            letter-spacing: -0.03em;
+        }
+
+        .hero p {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.55;
+            color: rgba(255, 255, 255, 0.82);
+            max-width: 780px;
+        }
+
+        .hero-note {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .hero-note h2 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+
+        .hero-note p {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.86);
+        }
+
+        .body {
+            padding: 28px 32px 36px;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .legend-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 16px 18px;
+        }
+
+        .legend-card strong {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .legend-card span {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .roadmap {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+            align-items: start;
+        }
+
+        .phase {
+            position: relative;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            padding: 22px 20px 20px;
+            min-height: 100%;
+        }
+
+        .phase::after {
+            content: "";
+            position: absolute;
+            top: 24px;
+            right: -16px;
+            width: 32px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--blue) 0%, rgba(61, 115, 255, 0.08) 100%);
+            border-radius: 999px;
+        }
+
+        .phase:last-child::after {
+            display: none;
+        }
+
+        .phase-tag {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .tag-now {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .tag-next {
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
+        .tag-later {
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+
+        .phase h3 {
+            margin: 14px 0 10px;
+            font-size: 24px;
+        }
+
+        .phase-intro {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--muted);
+            margin-bottom: 18px;
+        }
+
+        .track {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .track-header {
+            padding: 12px 14px;
+            font-weight: 700;
+            font-size: 14px;
+            background: #f8fbff;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .track-body {
+            padding: 14px;
+        }
+
+        .task {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-bottom: 1px dashed #e7eef7;
+        }
+
+        .task:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 999px;
+            flex: 0 0 auto;
+            margin-top: 5px;
+        }
+
+        .done {
+            background: var(--green);
+        }
+
+        .next {
+            background: var(--blue);
+        }
+
+        .later {
+            background: var(--amber);
+        }
+
+        .task strong {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .task span {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .decision {
+            margin-top: 18px;
+            background: linear-gradient(135deg, #fff9ec 0%, #ffffff 100%);
+            border: 1px solid #f0deb0;
+            border-radius: 20px;
+            padding: 18px 18px 16px;
+        }
+
+        .decision h4 {
+            margin: 0 0 10px;
+            font-size: 18px;
+            color: #7b5a11;
+        }
+
+        .decision p,
+        .decision li {
+            font-size: 14px;
+            color: #6f5a22;
+            line-height: 1.6;
+        }
+
+        .decision ul {
+            margin: 10px 0 0 18px;
+            padding: 0;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        .footer-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            padding: 18px 20px;
+        }
+
+        .footer-card h4 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+
+        .footer-card p,
+        .footer-card li {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .footer-card ul {
+            margin: 10px 0 0 18px;
+            padding: 0;
+        }
+
+        @media (max-width: 1100px) {
+            .hero-grid,
+            .legend,
+            .roadmap,
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .phase::after {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        <section class="hero">
+            <span class="eyebrow">Roadmap To Finalise The App</span>
+            <div class="hero-grid">
+                <div>
+                    <h1>What still needs to happen before this dashboard feels truly finished</h1>
+                    <p>
+                        The foundation is already working: the app is live, it receives raw data, runs its own calculations, and shows clear dashboard cards.
+                        The remaining roadmap is about making the experience practical, completing the data feeds, and finishing website health reporting.
+                    </p>
+                </div>
+                <div class="hero-note">
+                    <h2>Plain-English summary</h2>
+                    <p>
+                        We are no longer building the engine. We are finishing the controls, plugging in the remaining data sources, and making sure the dashboard becomes something people can rely on every week.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="body">
+            <div class="legend">
+                <div class="legend-card">
+                    <strong>Already working</strong>
+                    <span>Follow Up, Google Ads, target syncing, weekly and monthly views, and app-side calculations are already live.</span>
+                </div>
+                <div class="legend-card">
+                    <strong>Next layer</strong>
+                    <span>Improve the interface so it is easier to use in real life and remove unnecessary manual work.</span>
+                </div>
+                <div class="legend-card">
+                    <strong>Main bulk of work</strong>
+                    <span>Finish connecting the remaining reporting sources so the dashboard reflects the whole business, not just part of it.</span>
+                </div>
+                <div class="legend-card">
+                    <strong>Final outcome</strong>
+                    <span>A dashboard that shows what is healthy, what is drifting, what needs attention, and where action should happen next.</span>
+                </div>
+            </div>
+
+            <div class="roadmap">
+                <section class="phase">
+                    <span class="phase-tag tag-now">Phase 1</span>
+                    <h3>Make The App Practical</h3>
+                    <p class="phase-intro">
+                        These are the improvements that make the dashboard easier to use day to day, without changing the core architecture.
+                    </p>
+
+                    <div class="track">
+                        <div class="track-header">UI</div>
+                        <div class="track-body">
+                            <div class="task">
+                                <div class="dot next"></div>
+                                <div>
+                                    <strong>Optimise the interface for practical use</strong>
+                                    <span>Refine spacing, navigation, filters, hierarchy, and card layouts so the dashboard is easier to scan in real meetings.</span>
+                                </div>
+                            </div>
+                            <div class="task">
+                                <div class="dot next"></div>
+                                <div>
+                                    <strong>Add editable goals directly in the app</strong>
+                                    <span>Replace spreadsheet syncing with in-app goal editing so there is one source of truth and fewer moving parts.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track">
+                        <div class="track-header">Outcome</div>
+                        <div class="track-body">
+                            <div class="task">
+                                <div class="dot done"></div>
+                                <div>
+                                    <strong>Less friction for the team</strong>
+                                    <span>People can trust the dashboard and update targets without needing to jump between tools.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="phase">
+                    <span class="phase-tag tag-next">Phase 2</span>
+                    <h3>Complete The Reporting Inputs</h3>
+                    <p class="phase-intro">
+                        This is the main work left. Each source needs a reliable weekly and monthly reporting flow into the app.
+                    </p>
+
+                    <div class="track">
+                        <div class="track-header">Sales & Funnel Reporting</div>
+                        <div class="track-body">
+                            <div class="task">
+                                <div class="dot next"></div>
+                                <div>
+                                    <strong>Set up Salesforce weekly reporting</strong>
+                                    <span>Send raw counts for prospects, applications, processing, approved, confirmed, and arrived students.</span>
+                                </div>
+                            </div>
+                            <div class="task">
+                                <div class="dot next"></div>
+                                <div>
+                                    <strong>Set up Salesforce monthly reporting</strong>
+                                    <span>Keep a dedicated monthly view so the app can compare weeks and whole months cleanly.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track">
+                        <div class="track-header">Traffic & Ad Reporting</div>
+                        <div class="track-body">
+                            <div class="task">
+                                <div class="dot next"></div>
+                                <div>
+                                    <strong>Set up GA4 reporting</strong>
+                                    <span>Use GA4 for traffic and on-site activity signals that help explain lead quality and source performance.</span>
+                                </div>
+                            </div>
+                            <div class="task">
+                                <div class="dot next"></div>
+                                <div>
+                                    <strong>Set up Google Ads reporting</strong>
+                                    <span>Move from test values to the real recurring ad data feed.</span>
+                                </div>
+                            </div>
+                            <div class="task">
+                                <div class="dot later"></div>
+                                <div>
+                                    <strong>Set up Meta Ads reporting</strong>
+                                    <span>Add the same raw-count approach used for Google Ads so channel comparisons stay consistent.</span>
+                                </div>
+                            </div>
+                            <div class="task">
+                                <div class="dot later"></div>
+                                <div>
+                                    <strong>Set up TikTok Ads reporting</strong>
+                                    <span>Bring TikTok into the same source-health structure once the raw fields are defined.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="decision">
+                        <h4>Important reporting decision</h4>
+                        <p>
+                            Do not assume monthly numbers should always be calculated from weekly reports.
+                        </p>
+                        <ul>
+                            <li>If the weekly values are simple raw totals, they can often be summed into a month.</li>
+                            <li>If the weekly values are partial snapshots, stage rates, or ratios, monthly should be reported separately or recalculated from monthly raw totals.</li>
+                            <li>Safest approach: store raw counts and let the app calculate both weekly and monthly metrics from the right period totals.</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section class="phase">
+                    <span class="phase-tag tag-later">Phase 3</span>
+                    <h3>Finish Website Health</h3>
+                    <p class="phase-intro">
+                        This is the least defined area today, so it needs both business clarity and data plumbing.
+                    </p>
+
+                    <div class="track">
+                        <div class="track-header">Define What “Website Health” Means</div>
+                        <div class="track-body">
+                            <div class="task">
+                                <div class="dot next"></div>
+                                <div>
+                                    <strong>Figure out the reporting model</strong>
+                                    <span>Decide exactly which signals matter: speed, downtime, broken links, rankings, sessions, and click-throughs.</span>
+                                </div>
+                            </div>
+                            <div class="task">
+                                <div class="dot next"></div>
+                                <div>
+                                    <strong>Lock the formulas and thresholds</strong>
+                                    <span>Define what counts as healthy, drifting, or poor for each website metric.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track">
+                        <div class="track-header">Implement The Feed</div>
+                        <div class="track-body">
+                            <div class="task">
+                                <div class="dot later"></div>
+                                <div>
+                                    <strong>Set up website health reporting</strong>
+                                    <span>Connect Pingdom and any SEO or analytics source needed so the dashboard has real live website-health data.</span>
+                                </div>
+                            </div>
+                            <div class="task">
+                                <div class="dot later"></div>
+                                <div>
+                                    <strong>Show website health clearly in the dashboard</strong>
+                                    <span>Present site performance the same way as the other sections: what is working, what is below target, and where attention is needed.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="footer-grid">
+                <div class="footer-card">
+                    <h4>Simple “finished” definition</h4>
+                    <ul>
+                        <li>The team can use the dashboard without needing spreadsheets or manual interpretation.</li>
+                        <li>All major reporting sources send reliable raw data into the app on schedule.</li>
+                        <li>The app calculates the important metrics itself.</li>
+                        <li>The dashboard clearly highlights what is healthy, what is drifting, and what needs intervention.</li>
+                    </ul>
+                </div>
+
+                <div class="footer-card">
+                    <h4>Most practical order from here</h4>
+                    <ul>
+                        <li>First: improve the UI and move goals into the app.</li>
+                        <li>Second: finish Salesforce, GA4, Google Ads, Meta Ads, and TikTok reporting.</li>
+                        <li>Third: define and wire up website health reporting.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

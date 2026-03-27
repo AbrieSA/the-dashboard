@@ -24,9 +24,11 @@ Before making changes:
 1. Read `docs/llm-context.md`.
 2. Read `docs/metric-approval-table.md`.
 3. Read `docs/metric-formula-map.md`.
+4. Read `docs/finalisation-roadmap-infographic.html` for the current plain-English roadmap toward a finished app.
 
 Default assumptions:
 - formulas belong in the app, not Zapier
 - only the approved v1 scope should be treated as finalized
 - production changes should preserve the current live behavior unless the user explicitly requests a change
 - if the dashboard shows a connection problem, treat it as a real runtime data issue, not a fake preview-mode fallback
+- the roadmap infographic is a living planning artifact and should be updated as major milestones are completed or reprioritized
