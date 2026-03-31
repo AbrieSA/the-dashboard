@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       syncedCount: result.syncedCount,
       updatedCount: result.updatedCount,
       failedCount: result.failedCount,
+      cleanupDeletedCount: result.cleanupDeletedCount,
       results: result.results,
     },
     { status: result.statusCode },

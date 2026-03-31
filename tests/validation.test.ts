@@ -72,17 +72,16 @@ describe("targetRowSchema", () => {
 });
 
 describe("websiteHealthSyncRequestSchema", () => {
-  it("accepts bulk sync payloads", () => {
+  it("accepts strategy-scoped sync payloads", () => {
     const payload = websiteHealthSyncRequestSchema.parse({
       pageIds: ["page-1", "page-2"],
       strategies: ["mobile", "desktop"],
-      timegrains: ["WEEK", "MONTH"],
-      observedAt: "2026-03-31T00:00:00.000Z",
+      notes: "Manual website-health refresh",
     });
 
     expect(payload.pageIds).toEqual(["page-1", "page-2"]);
     expect(payload.strategies).toEqual(["mobile", "desktop"]);
-    expect(payload.timegrains).toEqual(["WEEK", "MONTH"]);
+    expect(payload.notes).toBe("Manual website-health refresh");
   });
 });
 
@@ -99,10 +98,9 @@ describe("websitePageCreateSchema", () => {
 });
 
 describe("websiteHealthReportQuerySchema", () => {
-  it("defaults to all strategies for weekly reports", () => {
+  it("defaults to all strategies for current website-health reports", () => {
     const query = websiteHealthReportQuerySchema.parse({});
 
-    expect(query.timegrain).toBe("WEEK");
     expect(query.strategy).toBe("all");
   });
 });

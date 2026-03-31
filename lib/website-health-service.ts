@@ -1,6 +1,10 @@
 import { Prisma, SourceRunStatus, SourceSystem, Timegrain } from "@prisma/client";
-import { revalidateTag } from "next/cache";
-import { DASHBOARD_CACHE_TAG } from "@/lib/deployment";
+import { revalidateTag, unstable_cache } from "next/cache";
+import {
+  DASHBOARD_CACHE_TAG,
+  WEBSITE_HEALTH_REPORT_CACHE_REVALIDATE_SECONDS,
+  WEBSITE_HEALTH_REPORT_CACHE_TAG,
+} from "@/lib/deployment";
 import { fetchPageSpeedSnapshot } from "@/lib/pagespeed";
 import { prisma } from "@/lib/prisma";
 import {
@@ -21,8 +25,123 @@ import type {
   WebsitePageUpdateInput,
 } from "@/lib/validation";
 
+const PAGESPEED_FETCH_CONCURRENCY = 3;
+const PAGESPEED_RETRY_ATTEMPTS = 3;
+const PAGESPEED_RETRY_BASE_DELAY_MS = 700;
+
 function serializeSyncPayload(input: Record<string, unknown>) {
   return input as Prisma.InputJsonValue;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getRetryDelayMs(attemptIndex: number) {
+  const jitter = Math.floor(Math.random() * 200);
+  return PAGESPEED_RETRY_BASE_DELAY_MS * 2 ** attemptIndex + jitter;
+}
+
+function isRetryablePageSpeedError(errorMessage: string) {
+  const lowerMessage = errorMessage.toLowerCase();
+  return (
+    lowerMessage.includes("status 429") ||
+    lowerMessage.includes("status 500") ||
+    lowerMessage.includes("status 502") ||
+    lowerMessage.includes("status 503") ||
+    lowerMessage.includes("status 504") ||
+    lowerMessage.includes("fetch failed") ||
+    lowerMessage.includes("timed out") ||
+    lowerMessage.includes("timeout")
+  );
+}
+
+async function mapWithConcurrency<TInput, TResult>(
+  items: TInput[],
+  concurrency: number,
+  mapper: (item: TInput, index: number) => Promise<TResult>,
+) {
+  const maxWorkers = Math.max(1, Math.min(concurrency, items.length));
+  const results = new Array<TResult>(items.length);
+  let cursor = 0;
+
+  await Promise.all(
+    Array.from({ length: maxWorkers }, async () => {
+      while (true) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= items.length) {
+          return;
+        }
+        results[index] = await mapper(items[index], index);
+      }
+    }),
+  );
+
+  return results;
+}
+
+let hasPrunedLegacyWebsiteHealthSnapshots = false;
+
+async function pruneLegacyWebsiteHealthSnapshots() {
+  if (hasPrunedLegacyWebsiteHealthSnapshots) {
+    return 0;
+  }
+
+  const deleted = await prisma.websiteHealthSnapshot.deleteMany({
+    where: {
+      OR: [
+        { timegrain: { not: websiteHealthCompatTimegrain } },
+        { periodStart: { not: websiteHealthCompatPeriodStart } },
+      ],
+    },
+  });
+
+  hasPrunedLegacyWebsiteHealthSnapshots = true;
+  return deleted.count;
+}
+
+type PageStrategyRequest = {
+  page: {
+    id: string;
+    key: string;
+    label: string;
+    url: string;
+  };
+  strategy: WebsiteHealthStrategyParam;
+};
+
+async function fetchPageSpeedWithRetry({ page, strategy }: PageStrategyRequest) {
+  let lastError: string | null = null;
+
+  for (let attempt = 1; attempt <= PAGESPEED_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const snapshot = await fetchPageSpeedSnapshot(page.url, strategy);
+      return {
+        page,
+        strategy,
+        snapshot,
+        error: null,
+        attempts: attempt,
+      } as const;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown PageSpeed error.";
+      lastError = message;
+      const shouldRetry = attempt < PAGESPEED_RETRY_ATTEMPTS && isRetryablePageSpeedError(message);
+      if (!shouldRetry) {
+        break;
+      }
+      await sleep(getRetryDelayMs(attempt - 1));
+    }
+  }
+
+  return {
+    page,
+    strategy,
+    snapshot: null,
+    error: lastError ?? "Unknown PageSpeed error.",
+    attempts: PAGESPEED_RETRY_ATTEMPTS,
+  } as const;
 }
 
 async function upsertLegacyWebsiteSpeedObservation(args: {
@@ -121,7 +240,7 @@ export async function createWebsitePage(input: WebsitePageCreateInput) {
     throw error;
   }
 
-  return prisma.websitePage.create({
+  const createdPage = await prisma.websitePage.create({
     data: {
       key,
       label: input.label,
@@ -129,6 +248,9 @@ export async function createWebsitePage(input: WebsitePageCreateInput) {
       sortOrder,
     },
   });
+
+  revalidateTag(WEBSITE_HEALTH_REPORT_CACHE_TAG, "max");
+  return createdPage;
 }
 
 export async function updateWebsitePage(id: string, input: WebsitePageUpdateInput) {
@@ -158,10 +280,13 @@ export async function updateWebsitePage(id: string, input: WebsitePageUpdateInpu
     }
   }
 
-  return prisma.websitePage.update({
+  const updatedPage = await prisma.websitePage.update({
     where: { id },
     data: input,
   });
+
+  revalidateTag(WEBSITE_HEALTH_REPORT_CACHE_TAG, "max");
+  return updatedPage;
 }
 
 async function getRequestedWebsitePages(pageIds?: string[]) {
@@ -206,6 +331,7 @@ function normalizeSyncInput(input: WebsiteHealthSyncRequest) {
 
 export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
   const normalized = normalizeSyncInput(input);
+  const cleanupDeletedCount = await pruneLegacyWebsiteHealthSnapshots();
   const pages = await getRequestedWebsitePages(normalized.pageIds);
   const pageStrategyRequests = pages.flatMap((page) =>
     normalized.strategies.map((strategy) => ({
@@ -213,25 +339,10 @@ export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
       strategy,
     })),
   );
-  const fetchedSnapshots = await Promise.all(
-    pageStrategyRequests.map(async ({ page, strategy }) => {
-      try {
-        const snapshot = await fetchPageSpeedSnapshot(page.url, strategy);
-        return {
-          page,
-          strategy,
-          snapshot,
-          error: null,
-        } as const;
-      } catch (error) {
-        return {
-          page,
-          strategy,
-          snapshot: null,
-          error: error instanceof Error ? error.message : "Unknown PageSpeed error.",
-        } as const;
-      }
-    }),
+  const fetchedSnapshots = await mapWithConcurrency(
+    pageStrategyRequests,
+    PAGESPEED_FETCH_CONCURRENCY,
+    fetchPageSpeedWithRetry,
   );
   const currentBucket = {
     timegrain: websiteHealthCompatTimegrain,
@@ -252,7 +363,7 @@ export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
   let failedCount = 0;
   let successCount = 0;
 
-  for (const { page, strategy, snapshot, error } of fetchedSnapshots) {
+  for (const { page, strategy, snapshot, error, attempts } of fetchedSnapshots) {
     if (!snapshot) {
       results.push({
         page: {
@@ -263,7 +374,7 @@ export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
         },
         strategy,
         status: "failed",
-        reason: error ?? "Unknown PageSpeed error.",
+        reason: `${error ?? "Unknown PageSpeed error."} (attempts: ${attempts})`,
       });
       failedCount += 1;
       continue;
@@ -438,6 +549,7 @@ export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
 
   if (successCount > 0) {
     revalidateTag(DASHBOARD_CACHE_TAG, "max");
+    revalidateTag(WEBSITE_HEALTH_REPORT_CACHE_TAG, "max");
   }
 
   return {
@@ -445,12 +557,13 @@ export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
     syncedCount,
     updatedCount,
     failedCount,
+    cleanupDeletedCount,
     results,
     statusCode: successCount > 0 ? 200 : 502,
   };
 }
 
-export async function getWebsiteHealthReport(query: WebsiteHealthReportQuery) {
+async function getWebsiteHealthReportUncached(query: WebsiteHealthReportQuery) {
   const pageWhere = query.pageId ? { id: query.pageId } : { isActive: true };
   const pages = await prisma.websitePage.findMany({
     where: pageWhere,
@@ -473,6 +586,8 @@ export async function getWebsiteHealthReport(query: WebsiteHealthReportQuery) {
   const snapshots = await prisma.websiteHealthSnapshot.findMany({
     where: {
       websitePageId: { in: pages.map((page) => page.id) },
+      timegrain: websiteHealthCompatTimegrain,
+      periodStart: websiteHealthCompatPeriodStart,
       ...strategyFilter,
     },
     orderBy: [{ fetchedAt: "desc" }, { updatedAt: "desc" }],
@@ -516,4 +631,18 @@ export async function getWebsiteHealthReport(query: WebsiteHealthReportQuery) {
       query.strategy as WebsiteHealthReportStrategy,
     ),
   };
+}
+
+const getCachedWebsiteHealthReport = unstable_cache(
+  async (strategy: WebsiteHealthReportQuery["strategy"], pageId?: string) =>
+    getWebsiteHealthReportUncached({ strategy, pageId }),
+  [WEBSITE_HEALTH_REPORT_CACHE_TAG],
+  {
+    revalidate: WEBSITE_HEALTH_REPORT_CACHE_REVALIDATE_SECONDS,
+    tags: [WEBSITE_HEALTH_REPORT_CACHE_TAG],
+  },
+);
+
+export async function getWebsiteHealthReport(query: WebsiteHealthReportQuery) {
+  return getCachedWebsiteHealthReport(query.strategy, query.pageId);
 }
