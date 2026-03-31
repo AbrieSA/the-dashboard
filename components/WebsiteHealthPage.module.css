@@ -38,9 +38,24 @@
 }
 
 .actions {
+  align-items: center;
   display: flex;
   gap: 12px;
   flex-shrink: 0;
+}
+
+.refreshMetaGroup {
+  align-items: flex-end;
+  display: grid;
+  gap: 6px;
+}
+
+.lastRefreshText {
+  color: #7088a8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin: 0;
+  text-align: right;
 }
 
 .addButton,
@@ -511,7 +526,13 @@
   }
 
   .actions {
+    align-items: flex-start;
+    flex-direction: column;
     width: 100%;
+  }
+
+  .lastRefreshText {
+    text-align: left;
   }
 }
 

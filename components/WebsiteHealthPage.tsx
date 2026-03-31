@@ -242,6 +242,22 @@ export function WebsiteHealthPage({
   const [refreshingPageId, setRefreshingPageId] = useState<string | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const formattedLastRefreshDate = (() => {
+    if (!report?.capturedAt) {
+      return "No data";
+    }
+
+    const parsedDate = new Date(report.capturedAt);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "No data";
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(parsedDate);
+  })();
 
   function toggleExpanded(pageId: string) {
     setExpandedIds((current) =>
@@ -346,15 +362,18 @@ export function WebsiteHealthPage({
           </div>
 
           <div className={styles.actions}>
-            <button
-              className={styles.refreshButton}
-              disabled={isRefreshingAll || isPending}
-              onClick={() => void handleRefresh()}
-              type="button"
-            >
-              <RefreshCw className={isRefreshingAll ? styles.spinningIcon : ""} size={16} />
-              {isRefreshingAll ? "Refreshing..." : "Refresh current view"}
-            </button>
+            <div className={styles.refreshMetaGroup}>
+              <button
+                className={styles.refreshButton}
+                disabled={isRefreshingAll || isPending}
+                onClick={() => void handleRefresh()}
+                type="button"
+              >
+                <RefreshCw className={isRefreshingAll ? styles.spinningIcon : ""} size={16} />
+                {isRefreshingAll ? "Refreshing..." : "Refresh current view"}
+              </button>
+              <p className={styles.lastRefreshText}>Last Refresh: {formattedLastRefreshDate}</p>
+            </div>
             <button
               className={styles.addButton}
               onClick={() => setIsFormOpen((current) => !current)}
