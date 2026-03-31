@@ -224,14 +224,13 @@
 }
 
 .pageTitleButton {
-  background: white;
-  border: 3px solid rgba(57, 68, 84, 0.56);
-  border-radius: 7px;
+  background: transparent;
+  border: 0;
   color: #26374f;
   font-size: 1.05rem;
   font-weight: 700;
   justify-self: start;
-  padding: 10px 16px;
+  padding: 0;
 }
 
 .pageUrl {
