@@ -347,10 +347,6 @@ export function WebsiteHealthPage({
           <div>
             <p className={styles.eyebrow}>Website Health</p>
             <h1 className={styles.heading}>Track each monitored page the way the team will actually use it.</h1>
-            <p className={styles.subcopy}>
-              Rows stay compact until you need detail. Expand any page to inspect LCP, INP, and CLS for
-              {strategy === "all" ? " both mobile and desktop." : ` the ${strategy} experience.`}
-            </p>
           </div>
 
           <div className={styles.actions}>
@@ -412,16 +408,6 @@ export function WebsiteHealthPage({
         {refreshError ? <p className={`${styles.formMessage} ${styles.errorMessage}`}>{refreshError}</p> : null}
         {runtimeMessage ? <div className={styles.runtimeCard}>{runtimeMessage}</div> : null}
 
-        <div className={styles.contextBar}>
-          <span className={styles.contextPill}>{timegrain === "WEEK" ? "Weekly snapshots" : "Monthly snapshots"}</span>
-          <span className={styles.contextPill}>
-            {strategy === "all" ? "Mobile + Desktop" : strategy === "mobile" ? "Mobile only" : "Desktop only"}
-          </span>
-          <span className={styles.contextPill}>
-            {report?.rows.length ?? 0} page{report?.rows.length === 1 ? "" : "s"}
-          </span>
-        </div>
-
         <div className={styles.stack}>
           {report?.rows.map((row) => {
             const isExpanded = expandedIds.includes(row.page.id);
@@ -445,7 +431,6 @@ export function WebsiteHealthPage({
                         {row.page.url}
                       </a>
                     </div>
-                    <span className={styles.matchPill}>LCP / INP / CLS</span>
                   </div>
 
                   <div className={styles.rowActions}>
@@ -458,12 +443,13 @@ export function WebsiteHealthPage({
 
                     <button
                       className={styles.secondaryAction}
+                      aria-label={`Refresh ${row.page.label}`}
                       disabled={refreshingPageId === row.page.id || isPending}
                       onClick={() => void handleRefresh(row.page.id)}
+                      title={`Refresh ${row.page.label}`}
                       type="button"
                     >
                       <RefreshCw className={refreshingPageId === row.page.id ? styles.spinningIcon : ""} size={15} />
-                      {refreshingPageId === row.page.id ? "Refreshing..." : "Refresh"}
                     </button>
 
                     <button className={styles.expandButton} onClick={() => toggleExpanded(row.page.id)} type="button">

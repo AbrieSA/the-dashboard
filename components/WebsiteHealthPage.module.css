@@ -37,14 +37,6 @@
   max-width: 760px;
 }
 
-.subcopy {
-  color: #5d7494;
-  font-size: 0.98rem;
-  line-height: 1.7;
-  margin: 14px 0 0;
-  max-width: 740px;
-}
-
 .actions {
   display: flex;
   gap: 12px;
@@ -88,7 +80,12 @@
 }
 
 .secondaryAction {
-  padding: 10px 14px;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  display: inline-flex;
+  justify-content: center;
+  padding: 8px;
 }
 
 .refreshButton:disabled,
@@ -175,25 +172,6 @@
   padding: 14px 16px;
 }
 
-.contextBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 22px;
-}
-
-.contextPill,
-.matchPill {
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(196, 208, 225, 0.9);
-  border-radius: 999px;
-  color: #6280a3;
-  display: inline-flex;
-  font-size: 0.84rem;
-  font-weight: 700;
-  padding: 7px 12px;
-}
-
 .stack {
   display: grid;
   gap: 18px;
@@ -268,7 +246,7 @@
 .rowActions {
   align-items: center;
   display: flex;
-  gap: 16px;
+  gap: 10px;
 }
 
 .scoreCard {

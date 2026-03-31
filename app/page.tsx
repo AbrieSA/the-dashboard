@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { DashboardView } from "@/components/DashboardView";
 import { getDashboardSnapshot } from "@/lib/dashboard";
 import type { DashboardGroupView, DashboardRuntimeStatus } from "@/lib/dashboard-types";
@@ -33,11 +35,26 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   return (
-    <DashboardView
-      groups={groups}
-      timegrain={query.timegrain}
-      runtimeStatus={runtimeStatus}
-      runtimeMessage={runtimeMessage}
-    />
+    <>
+      <div
+        style={{
+          bottom: "24px",
+          position: "fixed",
+          right: "24px",
+          zIndex: 50,
+        }}
+      >
+        <Link className="button" href="/website-health?timegrain=WEEK&strategy=all">
+          Website Health
+        </Link>
+      </div>
+
+      <DashboardView
+        groups={groups}
+        timegrain={query.timegrain}
+        runtimeStatus={runtimeStatus}
+        runtimeMessage={runtimeMessage}
+      />
+    </>
   );
 }
