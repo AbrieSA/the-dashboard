@@ -1,5 +1,10 @@
-import type { WebsiteDataScope, WebsiteHealthSnapshot, WebsitePage, WebsitePerformanceStrategy } from "@prisma/client";
-import { startOfTimegrain } from "@/lib/timegrain";
+import type {
+  Timegrain,
+  WebsiteDataScope,
+  WebsiteHealthSnapshot,
+  WebsitePage,
+  WebsitePerformanceStrategy,
+} from "@prisma/client";
 
 export const websiteHealthThresholds = {
   lcpMs: {
@@ -17,13 +22,13 @@ export const websiteHealthThresholds = {
 } as const;
 
 export const websiteHealthDefaultStrategies = ["mobile", "desktop"] as const;
-export const websiteHealthDefaultTimegrains = ["WEEK", "MONTH"] as const;
+export const websiteHealthCompatTimegrain: Timegrain = "MONTH";
+export const websiteHealthCompatPeriodStart = new Date("2000-01-01T00:00:00.000Z");
 
 export type WebsiteHealthStatus = "GOOD" | "NEEDS_IMPROVEMENT" | "POOR" | "NO_DATA";
 export type WebsiteMetricHealthCategory = Exclude<WebsiteHealthStatus, "NO_DATA">;
 export type WebsiteHealthStrategyParam = "mobile" | "desktop";
 export type WebsiteHealthReportStrategy = "all" | WebsiteHealthStrategyParam;
-export type WebsiteHealthTimegrain = "WEEK" | "MONTH";
 
 export type WebsiteHealthMetricSlot = {
   performanceScore: number | null;
@@ -56,9 +61,8 @@ export type WebsiteHealthReportRow = {
 export type WebsiteHealthReportPage = WebsiteHealthReportRow["page"];
 
 export type WebsiteHealthReportResult = {
-  timegrain: WebsiteHealthTimegrain;
-  periodStart: string;
   strategy: WebsiteHealthReportStrategy;
+  capturedAt: string | null;
   pages: WebsiteHealthReportPage[];
   rows: WebsiteHealthReportRow[];
 };
@@ -185,10 +189,6 @@ export function getPerformanceScoreFromRawJson(rawJson: unknown) {
   return Math.round(normalizedScore);
 }
 
-export function getWebsiteHealthPeriodStart(date: Date, timegrain: WebsiteHealthTimegrain) {
-  return startOfTimegrain(date, timegrain);
-}
-
 export function toWebsitePerformanceStrategy(strategy: WebsiteHealthStrategyParam): WebsitePerformanceStrategy {
   return strategy === "desktop" ? "DESKTOP" : "MOBILE";
 }
@@ -202,10 +202,9 @@ export function fromWebsitePerformanceStrategy(
 export function buildWebsiteHealthExternalRunId(
   pageKey: string,
   strategy: WebsiteHealthStrategyParam,
-  timegrain: WebsiteHealthTimegrain,
-  periodStart: Date,
+  requestedAt: Date,
 ) {
-  return `pagespeed:${pageKey}:${strategy}:${timegrain}:${periodStart.toISOString()}`;
+  return `pagespeed:${pageKey}:${strategy}:${requestedAt.toISOString()}`;
 }
 
 function statusSeverity(status: WebsiteHealthStatus) {
@@ -278,10 +277,12 @@ export function buildWebsiteHealthReportRows(
   const snapshotByPageAndStrategy = new Map<string, SnapshotRecord>();
 
   for (const snapshot of snapshots) {
-    snapshotByPageAndStrategy.set(
-      `${snapshot.websitePage.id}:${snapshot.strategy}`,
-      snapshot,
-    );
+    const key = `${snapshot.websitePage.id}:${snapshot.strategy}`;
+    const existing = snapshotByPageAndStrategy.get(key);
+
+    if (!existing || snapshot.fetchedAt > existing.fetchedAt) {
+      snapshotByPageAndStrategy.set(key, snapshot);
+    }
   }
 
   return pages.map<WebsiteHealthReportRow>((page) => {

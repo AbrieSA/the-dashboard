@@ -36,16 +36,12 @@ export const targetRowSchema = z.object({
 });
 
 export const pagespeedStrategySchema = z.enum(["mobile", "desktop"]);
-export const websiteHealthTimegrainSchema = z.enum(["WEEK", "MONTH"]);
 export const websiteHealthReportStrategySchema = z.enum(["all", "mobile", "desktop"]);
 
 export const websiteHealthSyncRequestSchema = z.object({
   pageIds: z.array(z.string().min(1)).optional(),
   strategies: z.array(pagespeedStrategySchema).min(1).optional(),
-  timegrains: z.array(websiteHealthTimegrainSchema).min(1).optional(),
   strategy: pagespeedStrategySchema.optional(),
-  timegrain: websiteHealthTimegrainSchema.optional(),
-  observedAt: z.iso.datetime().optional(),
   notes: z.string().optional(),
 });
 
@@ -73,7 +69,6 @@ export const websitePageUpdateSchema = z
   });
 
 export const websiteHealthReportQuerySchema = z.object({
-  timegrain: websiteHealthTimegrainSchema.default("WEEK"),
   strategy: websiteHealthReportStrategySchema.default("all"),
   pageId: z.string().min(1).optional(),
 });

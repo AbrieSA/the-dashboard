@@ -7,7 +7,6 @@ export const preferredRegion = "hnd1";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = websiteHealthReportQuerySchema.parse({
-    timegrain: url.searchParams.get("timegrain") ?? undefined,
     strategy: url.searchParams.get("strategy") ?? undefined,
     pageId: url.searchParams.get("pageId") ?? undefined,
   });

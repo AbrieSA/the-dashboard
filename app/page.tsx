@@ -44,7 +44,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           zIndex: 50,
         }}
       >
-        <Link className="button" href="/website-health?timegrain=WEEK&strategy=all">
+        <Link className="button" href="/website-health?strategy=all">
           Website Health
         </Link>
       </div>

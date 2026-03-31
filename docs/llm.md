@@ -14,6 +14,9 @@ Current high-level status:
   - monitored page registry
   - dedicated report API with `mobile`, `desktop`, and `all`
   - dedicated `/website-health` page with expandable rows and frontend page creation
+- Website Health no longer uses weekly/monthly buckets in the user-facing app:
+  - it should be treated as current 28-day PageSpeed data
+  - `all` means show both device categories, not a separate stored aggregate
 - weekly and monthly ingestion are working
 - Google Sheets target sync is working
 - dashboard view switching has been stabilized with:

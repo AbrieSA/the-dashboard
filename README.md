@@ -93,6 +93,7 @@ Current implementation notes:
   - `INP`
   - `CLS`
 - snapshots are stored for both `mobile` and `desktop`
+- Website Health should be treated as current 28-day PageSpeed data, not weekly/monthly reporting
 - report queries support `all`, `mobile`, and `desktop`
 - `website_speed` is still mirrored from homepage mobile `LCP` for compatibility with the current dashboard card
 - in practice, automated calls without an API key can hit Google rate limits quickly, so `PAGESPEED_API_KEY` should be treated as required for production syncs
@@ -112,16 +113,14 @@ Optional body fields:
 {
   "pageIds": ["page-id-1"],
   "strategies": ["mobile", "desktop"],
-  "timegrains": ["WEEK", "MONTH"],
-  "observedAt": "2026-03-31T00:00:00.000Z",
-  "notes": "Manual weekly website-speed sync"
+  "notes": "Manual website-health sync"
 }
 ```
 
 Report request example:
 
 ```bash
-curl "https://your-app.vercel.app/api/website-health/report?timegrain=WEEK&strategy=all"
+curl "https://your-app.vercel.app/api/website-health/report?strategy=all"
 ```
 
 Page registry example:
@@ -139,4 +138,4 @@ Page registry example:
 - Duplicate Zap runs are prevented at the source-run level using `source + externalRunId`.
 - The dashboard can switch between month and year views using query params.
 - For Supabase, use the pooled connection string as `DATABASE_URL` and the direct connection string as `DIRECT_URL`.
-- Website Health stores weekly/monthly snapshot buckets, not aggregated averages derived from prior checks.
+- Website Health uses current 28-day PageSpeed data for the user-facing product model.

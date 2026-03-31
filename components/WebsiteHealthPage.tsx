@@ -19,13 +19,11 @@ import type {
   WebsiteHealthReportRow,
   WebsiteHealthReportStrategy,
   WebsiteHealthStatus,
-  WebsiteHealthTimegrain,
 } from "@/lib/website-health";
 import styles from "@/components/WebsiteHealthPage.module.css";
 
 type WebsiteHealthPageProps = {
   report: WebsiteHealthReportResult | null;
-  timegrain: WebsiteHealthTimegrain;
   strategy: WebsiteHealthReportStrategy;
   runtimeMessage?: string | null;
 };
@@ -228,7 +226,6 @@ function DeviceVitalsCard({
 
 export function WebsiteHealthPage({
   report,
-  timegrain,
   strategy,
   runtimeMessage = null,
 }: WebsiteHealthPageProps) {
@@ -312,7 +309,6 @@ export function WebsiteHealthPage({
         body: JSON.stringify({
           pageIds: pageId ? [pageId] : undefined,
           strategies: strategy === "all" ? ["mobile", "desktop"] : [strategy],
-          timegrains: [timegrain],
         }),
       });
 
@@ -329,7 +325,7 @@ export function WebsiteHealthPage({
       setRefreshMessage(
         pageId
           ? `Fresh performance data pulled for this page${totalTouched > 0 ? "." : ", but no rows were updated."}`
-          : `Fresh performance data pulled for ${totalTouched} snapshot${totalTouched === 1 ? "" : "s"}.`,
+          : `Fresh performance data pulled for ${totalTouched} device check${totalTouched === 1 ? "" : "s"}.`,
       );
       startTransition(() => {
         router.refresh();

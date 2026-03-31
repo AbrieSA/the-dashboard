@@ -42,6 +42,7 @@ Confirmed working in production:
 - weekly Google Ads ingestion and calculations
 - Google Sheets target sync for active metrics
 - dedicated Website Health page route with expandable page rows, strategy filters, and frontend add-page support
+- Website Health now behaves as current 28-day data only, not weekly/monthly buckets in the user-facing app
 
 Deferred for now:
 - `Organic Website`
@@ -143,7 +144,7 @@ If the user changes business logic, update these docs first or immediately after
 `app/website-health/page.tsx`
 - dedicated Website Health screen
 - reads the Website Health report directly from the service layer
-- supports `WEEK` / `MONTH` and `all` / `mobile` / `desktop` viewing
+- supports `all` / `mobile` / `desktop` viewing
 
 `app/api/dashboard/route.ts`
 - JSON dashboard snapshot endpoint
@@ -239,7 +240,7 @@ Current interpretation:
 - `MetricTarget` = current / standard / desired thresholds
 - `SourceRun` = log of each ingest attempt
 - `WebsitePage` = a monitored page in the Website Health registry
-- `WebsiteHealthSnapshot` = one stored PageSpeed Web Vitals snapshot for a page + strategy + time bucket
+- `WebsiteHealthSnapshot` = the current stored PageSpeed Web Vitals snapshot for a page + strategy
 
 ## Naming / Terminology Rules
 
@@ -319,7 +320,8 @@ The current Website Health implementation is backend-first:
   - `mobile`
   - `desktop`
 - `all` is a report-time view that includes both side-by-side, not an averaged stored strategy
-- the route stores weekly/monthly snapshot buckets, not derived aggregates
+- Website Health should be treated as current 28-day PageSpeed data in both the backend contract and frontend experience
+- older compatibility bucket fields may still exist internally, but they are not the product model anymore
 - homepage mobile `LCP` is still mirrored into legacy `website_speed` for current dashboard compatibility
 - Google's docs say the API can work without a key, but in practice automated use can hit rate limits, so treat `PAGESPEED_API_KEY` as required for production reliability
 

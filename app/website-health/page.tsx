@@ -10,13 +10,12 @@ export const dynamic = "force-dynamic";
 export const preferredRegion = "hnd1";
 
 type WebsiteHealthRouteProps = {
-  searchParams: Promise<{ timegrain?: string; strategy?: string; pageId?: string }>;
+  searchParams: Promise<{ strategy?: string; pageId?: string }>;
 };
 
 export default async function WebsiteHealthRoute({ searchParams }: WebsiteHealthRouteProps) {
   const params = await searchParams;
   const query = websiteHealthReportQuerySchema.parse({
-    timegrain: params.timegrain,
     strategy: params.strategy,
     pageId: params.pageId,
   });
@@ -29,7 +28,6 @@ export default async function WebsiteHealthRoute({ searchParams }: WebsiteHealth
   } catch (error) {
     runtimeMessage = "Website health data is temporarily unavailable. Refresh in a few seconds to retry.";
     console.error("Website health report failed", {
-      timegrain: query.timegrain,
       strategy: query.strategy,
       pageId: query.pageId ?? null,
       error,
@@ -41,34 +39,20 @@ export default async function WebsiteHealthRoute({ searchParams }: WebsiteHealth
       <AppShellHeader activePage="website-health" hasRuntimeError={Boolean(runtimeMessage)}>
         <div className="toolbar">
           <Link
-            className={query.timegrain === "WEEK" ? "button" : "button-secondary"}
-            href={`/website-health?timegrain=WEEK&strategy=${query.strategy}`}
-          >
-            Week View
-          </Link>
-          <Link
-            className={query.timegrain === "MONTH" ? "button" : "button-secondary"}
-            href={`/website-health?timegrain=MONTH&strategy=${query.strategy}`}
-          >
-            Month View
-          </Link>
-        </div>
-        <div className="toolbar">
-          <Link
             className={query.strategy === "all" ? "button" : "button-secondary"}
-            href={`/website-health?timegrain=${query.timegrain}&strategy=all`}
+            href="/website-health?strategy=all"
           >
             All
           </Link>
           <Link
             className={query.strategy === "mobile" ? "button" : "button-secondary"}
-            href={`/website-health?timegrain=${query.timegrain}&strategy=mobile`}
+            href="/website-health?strategy=mobile"
           >
             Mobile
           </Link>
           <Link
             className={query.strategy === "desktop" ? "button" : "button-secondary"}
-            href={`/website-health?timegrain=${query.timegrain}&strategy=desktop`}
+            href="/website-health?strategy=desktop"
           >
             Desktop
           </Link>
@@ -80,7 +64,6 @@ export default async function WebsiteHealthRoute({ searchParams }: WebsiteHealth
           report={report}
           runtimeMessage={runtimeMessage}
           strategy={query.strategy}
-          timegrain={query.timegrain}
         />
       </div>
     </main>
