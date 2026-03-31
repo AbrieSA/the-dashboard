@@ -8,13 +8,13 @@ Internal dashboard starter for Salesforce, GA4, and website performance metrics.
 - Internal password gate with allow-listed emails
 - Zapier -> API ingestion
 - Google Sheets CSV -> target sync
-- Direct app-owned PageSpeed Insights sync for website speed
+- Direct app-owned PageSpeed Insights sync for Website Health
 
 ## Local setup
 1. Copy `.env.example` to `.env`.
 2. Create a Postgres database locally or in Supabase/Neon.
 3. Update `DATABASE_URL`, `DIRECT_URL`, `SESSION_SECRET`, `INTERNAL_DASHBOARD_PASSWORD`, `INGESTION_API_KEY`, and `GOOGLE_TARGETS_SYNC_KEY`.
-4. Optional but recommended for website health: set `WEBSITE_HEALTH_SYNC_KEY`, `PAGESPEED_API_KEY`, and `PAGESPEED_DEFAULT_URL`.
+4. Optional but recommended for website health: set `WEBSITE_HEALTH_SYNC_KEY` and `PAGESPEED_API_KEY`.
 5. Run `npm run prisma:generate`.
 6. Run `npm run prisma:deploy`.
 7. Run `npm run prisma:seed`.
@@ -30,9 +30,13 @@ Internal dashboard starter for Salesforce, GA4, and website performance metrics.
   - `POST /api/ingest`
   - `POST /api/sync-targets`
 - For direct website-performance syncing, configure:
-- `POST /api/website-health/sync`
-- header `x-sync-key: <WEBSITE_HEALTH_SYNC_KEY>` (or `GOOGLE_TARGETS_SYNC_KEY` as a fallback)
-- `PAGESPEED_API_KEY` is strongly recommended for automated or frequent use
+  - `POST /api/website-health/sync`
+  - `GET /api/website-health/report`
+  - `GET /api/website-health/pages`
+  - `POST /api/website-health/pages`
+  - `PATCH /api/website-health/pages/[id]`
+- `x-sync-key: <WEBSITE_HEALTH_SYNC_KEY>` protects the machine-to-machine website sync route
+- `PAGESPEED_API_KEY` should be treated as required for production website-health syncing
 
 ## Ingestion contract
 Send a `POST` to `/api/ingest` with header `x-api-key: <INGESTION_API_KEY>`.
@@ -65,7 +69,7 @@ Then set `GOOGLE_TARGETS_CSV_URL` to that tab's CSV export URL and call `POST /a
 
 ## Website health via PageSpeed Insights
 
-The first website-health slice can now be fetched directly by the app without Zapier using Google's official PageSpeed Insights API.
+Website Health is now a dedicated backend subsystem fed directly by Google's official PageSpeed Insights API.
 
 Google's docs say:
 - the API is `GET https://www.googleapis.com/pagespeedonline/v5/runPagespeed`
@@ -79,10 +83,18 @@ Sources:
 - [runPagespeed API reference](https://developers.google.com/speed/docs/insights/v5/reference/pagespeedapi/runpagespeed)
 
 Current implementation notes:
-- the app stores `website_speed` as Lighthouse `largest-contentful-paint` in milliseconds
-- extra Lighthouse values are saved in observation metadata for future use
-- the default test URL is `https://www.ywamships.org/`
-- the rest of the Website Health metrics are still intentionally deferred
+- monitored pages are stored in a page registry
+- the initial seeded pages are:
+  - `https://www.ywamships.org/`
+  - `https://www.ywamships.org/dts`
+  - `https://www.ywamships.org/volunteer-on-mv-ywam-png/`
+- first-class Website Health metrics are field-data Web Vitals:
+  - `LCP`
+  - `INP`
+  - `CLS`
+- snapshots are stored for both `mobile` and `desktop`
+- report queries support `all`, `mobile`, and `desktop`
+- `website_speed` is still mirrored from homepage mobile `LCP` for compatibility with the current dashboard card
 - in practice, automated calls without an API key can hit Google rate limits quickly, so `PAGESPEED_API_KEY` should be treated as required for production syncs
 
 Example request:
@@ -91,18 +103,34 @@ Example request:
 curl -X POST https://your-app.vercel.app/api/website-health/sync \
   -H "Content-Type: application/json" \
   -H "x-sync-key: yourWebsiteHealthSyncKey" \
-  -d "{\"timegrain\":\"WEEK\"}"
+  -d "{}"
 ```
 
 Optional body fields:
 
 ```json
 {
-  "url": "https://www.ywamships.org/",
-  "strategy": "mobile",
-  "timegrain": "WEEK",
+  "pageIds": ["page-id-1"],
+  "strategies": ["mobile", "desktop"],
+  "timegrains": ["WEEK", "MONTH"],
   "observedAt": "2026-03-31T00:00:00.000Z",
   "notes": "Manual weekly website-speed sync"
+}
+```
+
+Report request example:
+
+```bash
+curl "https://your-app.vercel.app/api/website-health/report?timegrain=WEEK&strategy=all"
+```
+
+Page registry example:
+
+```json
+{
+  "label": "About DTS",
+  "url": "https://www.ywamships.org/dts",
+  "key": "about_dts"
 }
 ```
 
@@ -111,4 +139,4 @@ Optional body fields:
 - Duplicate Zap runs are prevented at the source-run level using `source + externalRunId`.
 - The dashboard can switch between month and year views using query params.
 - For Supabase, use the pooled connection string as `DATABASE_URL` and the direct connection string as `DIRECT_URL`.
-- For website speed, prefer storing real weekly/monthly raw snapshots instead of deriving monthly values from weekly rates later.
+- Website Health stores weekly/monthly snapshot buckets, not aggregated averages derived from prior checks.

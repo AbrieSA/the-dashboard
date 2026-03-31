@@ -38,6 +38,27 @@ const groups = [
   },
 ];
 
+const websitePages = [
+  {
+    key: "home",
+    label: "Home",
+    url: "https://www.ywamships.org/",
+    sortOrder: 0,
+  },
+  {
+    key: "dts",
+    label: "DTS",
+    url: "https://www.ywamships.org/dts",
+    sortOrder: 10,
+  },
+  {
+    key: "volunteer_on_mv_ywam_png",
+    label: "Volunteer on MV YWAM PNG",
+    url: "https://www.ywamships.org/volunteer-on-mv-ywam-png/",
+    sortOrder: 20,
+  },
+] as const;
+
 const definitions = [
   ["prospects_to_applications", "Prospects > Applications", "follow_up_health", SourceSystem.SALESFORCE, "percentage", "Follow-up", undefined, undefined, 0],
   ["estimated_prospect_calls", "Est. Prospect Calls", "follow_up_health", SourceSystem.SALESFORCE, "count", "Follow-up", undefined, undefined, 1],
@@ -131,6 +152,14 @@ async function main() {
         isActive: activeMetricKeys.has(key),
         dashboardGroupId: dashboardGroup.id,
       },
+    });
+  }
+
+  for (const page of websitePages) {
+    await prisma.websitePage.upsert({
+      where: { key: page.key },
+      update: page,
+      create: page,
     });
   }
 }

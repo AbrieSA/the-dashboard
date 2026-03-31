@@ -35,6 +35,22 @@ enum Timegrain {
   YEAR
 }
 
+enum WebsitePerformanceStrategy {
+  MOBILE
+  DESKTOP
+}
+
+enum WebsiteDataScope {
+  PAGE
+  ORIGIN
+}
+
+enum HealthCategory {
+  GOOD
+  NEEDS_IMPROVEMENT
+  POOR
+}
+
 model DashboardGroup {
   id          String             @id @default(cuid())
   key         String             @unique
@@ -114,7 +130,49 @@ model SourceRun {
   payloadJson      Json?
   errorMessage     String?
   observations     MetricObservation[]
+  websiteHealthSnapshots WebsiteHealthSnapshot[]
 
   @@unique([sourceSystem, externalRunId])
   @@index([status, receivedAt(sort: Desc)])
+}
+
+model WebsitePage {
+  id        String                  @id @default(cuid())
+  key       String                  @unique
+  label     String
+  url       String                  @unique
+  isActive  Boolean                 @default(true)
+  sortOrder Int                     @default(0)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  snapshots WebsiteHealthSnapshot[]
+}
+
+model WebsiteHealthSnapshot {
+  id            String                     @id @default(cuid())
+  websitePage   WebsitePage                @relation(fields: [websitePageId], references: [id])
+  websitePageId String
+  strategy      WebsitePerformanceStrategy
+  timegrain     Timegrain
+  periodStart   DateTime
+  fetchedAt     DateTime
+  pageDataScope WebsiteDataScope
+  lcpMs         Decimal?                   @db.Decimal(18, 6)
+  inpMs         Decimal?                   @db.Decimal(18, 6)
+  cls           Decimal?                   @db.Decimal(18, 6)
+  lcpCategory   HealthCategory?
+  inpCategory   HealthCategory?
+  clsCategory   HealthCategory?
+  requestedUrl  String
+  finalUrl      String
+  rawJson       Json
+  sourceRun     SourceRun?                 @relation(fields: [sourceRunId], references: [id])
+  sourceRunId   String?
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+
+  @@unique([websitePageId, strategy, timegrain, periodStart])
+  @@index([timegrain, periodStart(sort: Desc)])
+  @@index([websitePageId, periodStart(sort: Desc)])
+  @@index([sourceRunId])
 }

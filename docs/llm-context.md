@@ -34,7 +34,7 @@ This is important. If metric logic changes later, the codebase should be the mai
 Approved active scope:
 - `Follow Up Health`
 - `Google Ads` inside `Prospect Source Health`
-- `Website Speed` as the first Website Health pilot metric
+- backend Website Health built around PageSpeed page registry + report APIs
 
 Confirmed working in production:
 - weekly Follow Up ingestion and calculations
@@ -67,7 +67,11 @@ What is already working:
 - production dashboard displays active metrics and targets correctly
 - dashboard view switching is stabilized with a short server-side snapshot cache
 - dashboard cache is invalidated after ingest and target sync so fresh data appears quickly
-- there is now an app-owned PageSpeed sync route for `website_speed`
+- there is now an app-owned Website Health backend with:
+  - page registry
+  - PageSpeed-based Web Vitals snapshots
+  - dedicated report API
+  - homepage mobile `LCP` compatibility mirroring into `website_speed`
 
 What is not done yet:
 - scheduled/fully real Zapier source mappings beyond the current validated test payloads
@@ -123,8 +127,17 @@ If the user changes business logic, update these docs first or immediately after
 - authenticated endpoint to sync Google Sheet target values
 
 `app/api/website-health/sync/route.ts`
-- authenticated endpoint that calls Google PageSpeed Insights directly
-- currently stores `website_speed` as Lighthouse LCP in milliseconds
+- authenticated bulk sync endpoint that calls Google PageSpeed Insights directly
+- stores multi-page Web Vitals snapshots for `mobile` and `desktop`
+
+`app/api/website-health/report/route.ts`
+- authenticated Website Health report endpoint for future frontend work
+
+`app/api/website-health/pages/route.ts`
+- authenticated page-registry list/create endpoint
+
+`app/api/website-health/pages/[id]/route.ts`
+- authenticated page-registry update endpoint
 
 `app/api/dashboard/route.ts`
 - JSON dashboard snapshot endpoint
@@ -183,7 +196,15 @@ If the user changes business logic, update these docs first or immediately after
 
 `lib/pagespeed.ts`
 - app-owned client for Google's PageSpeed Insights API
-- currently used to fetch the first Website Health metric directly without Zapier
+- parses CrUX field-data Web Vitals with page-level to origin-level fallback
+
+`lib/website-health.ts`
+- shared Website Health thresholds, statuses, strategy helpers, and report-row builders
+
+`lib/website-health-service.ts`
+- page registry CRUD helpers
+- Website Health bulk sync orchestration
+- report assembly for `mobile`, `desktop`, and `all`
 
 ## Database Model
 
@@ -193,12 +214,16 @@ Core models:
 - `MetricObservation`
 - `MetricTarget`
 - `SourceRun`
+- `WebsitePage`
+- `WebsiteHealthSnapshot`
 
 Current interpretation:
 - `MetricDefinition` = what a metric is
 - `MetricObservation` = a timestamped numeric value tied to a `timegrain`
 - `MetricTarget` = current / standard / desired thresholds
 - `SourceRun` = log of each ingest attempt
+- `WebsitePage` = a monitored page in the Website Health registry
+- `WebsiteHealthSnapshot` = one stored PageSpeed Web Vitals snapshot for a page + strategy + time bucket
 
 ## Naming / Terminology Rules
 
@@ -245,7 +270,7 @@ The app then calculates the derived dashboard metrics from those raw observation
 Practical note:
 - switching between `WEEK`, `MONTH`, and `YEAR` still triggers fresh dashboard reads, but those reads are now protected by a short cache
 - if the UI shows a connection issue, treat it as a real runtime/data-access problem, not a preview-mode fallback
-- Website Health now mixes patterns: Zapier for business/source metrics, direct app-side API sync for PageSpeed-based website speed
+- Website Health now mixes patterns: Zapier for business/source metrics, direct app-side API sync for PageSpeed-based Web Vitals
 
 ### Targets sheet
 
@@ -264,11 +289,22 @@ Current live setup:
 
 ### Website health sync
 
-The current Website Health implementation is intentionally narrow:
-- only `website_speed` is wired
-- it is populated from Google PageSpeed Insights
-- the default test URL is `https://www.ywamships.org/`
-- the route supports `WEEK`, `MONTH`, and `YEAR` observations, but for lab-style speed metrics you should prefer real weekly/monthly snapshots over derived rollups
+The current Website Health implementation is backend-first:
+- monitored pages live in a database-backed registry
+- the seeded pages are:
+  - `https://www.ywamships.org/`
+  - `https://www.ywamships.org/dts`
+  - `https://www.ywamships.org/volunteer-on-mv-ywam-png/`
+- first-class Website Health metrics are field-data:
+  - `LCP`
+  - `INP`
+  - `CLS`
+- snapshots are stored for:
+  - `mobile`
+  - `desktop`
+- `all` is a report-time view that includes both side-by-side, not an averaged stored strategy
+- the route stores weekly/monthly snapshot buckets, not derived aggregates
+- homepage mobile `LCP` is still mirrored into legacy `website_speed` for current dashboard compatibility
 - Google's docs say the API can work without a key, but in practice automated use can hit rate limits, so treat `PAGESPEED_API_KEY` as required for production reliability
 
 ## Frontend Intent
@@ -290,8 +326,9 @@ When editing the frontend:
 
 1. Lock down production auth with `INTERNAL_DASHBOARD_EMAILS` and stronger shared secrets.
 2. Replace validated test payloads with real Zapier mappings from Salesforce and Google Ads sources.
-3. Decide whether target sync should be manual-triggered or scheduled automatically.
-4. Only after the approved scope is stable, expand to deferred sections.
+3. Decide whether Website Health sync should be manual-triggered or scheduled automatically.
+4. Decide whether Google Sheets targets should remain external or move fully in-app.
+5. Build the frontend experience for the new Website Health backend.
 
 ## Safe Defaults For Future LLMs
 

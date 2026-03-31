@@ -36,16 +36,52 @@ export const targetRowSchema = z.object({
 });
 
 export const pagespeedStrategySchema = z.enum(["mobile", "desktop"]);
+export const websiteHealthTimegrainSchema = z.enum(["WEEK", "MONTH"]);
+export const websiteHealthReportStrategySchema = z.enum(["all", "mobile", "desktop"]);
 
 export const websiteHealthSyncRequestSchema = z.object({
-  url: z.url().optional(),
-  strategy: pagespeedStrategySchema.default("mobile"),
-  timegrain: timegrainSchema.default("WEEK"),
+  pageIds: z.array(z.string().min(1)).optional(),
+  strategies: z.array(pagespeedStrategySchema).min(1).optional(),
+  timegrains: z.array(websiteHealthTimegrainSchema).min(1).optional(),
+  strategy: pagespeedStrategySchema.optional(),
+  timegrain: websiteHealthTimegrainSchema.optional(),
   observedAt: z.iso.datetime().optional(),
   notes: z.string().optional(),
+});
+
+export const websitePageCreateSchema = z.object({
+  label: z.string().trim().min(1),
+  url: z.url(),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .regex(/^[a-z0-9]+(?:_[a-z0-9]+)*$/)
+    .optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const websitePageUpdateSchema = z
+  .object({
+    label: z.string().trim().min(1).optional(),
+    url: z.url().optional(),
+    isActive: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field must be provided.",
+  });
+
+export const websiteHealthReportQuerySchema = z.object({
+  timegrain: websiteHealthTimegrainSchema.default("WEEK"),
+  strategy: websiteHealthReportStrategySchema.default("all"),
+  pageId: z.string().min(1).optional(),
 });
 
 export type IngestionPayload = z.infer<typeof ingestionPayloadSchema>;
 export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
 export type TargetRow = z.infer<typeof targetRowSchema>;
 export type WebsiteHealthSyncRequest = z.infer<typeof websiteHealthSyncRequestSchema>;
+export type WebsitePageCreateInput = z.infer<typeof websitePageCreateSchema>;
+export type WebsitePageUpdateInput = z.infer<typeof websitePageUpdateSchema>;
+export type WebsiteHealthReportQuery = z.infer<typeof websiteHealthReportQuerySchema>;

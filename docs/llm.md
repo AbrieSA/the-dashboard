@@ -9,8 +9,10 @@ Current high-level status:
 - approved v1 scope is working end-to-end:
   - `Follow Up Health`
   - `Google Ads`
-- first Website Health implementation now exists:
-  - direct app-owned PageSpeed sync for `website_speed`
+- Website Health backend now exists:
+  - direct app-owned PageSpeed sync
+  - monitored page registry
+  - dedicated report API with `mobile`, `desktop`, and `all`
 - weekly and monthly ingestion are working
 - Google Sheets target sync is working
 - dashboard view switching has been stabilized with:
@@ -34,3 +36,4 @@ Default assumptions:
 - production changes should preserve the current live behavior unless the user explicitly requests a change
 - if the dashboard shows a connection problem, treat it as a real runtime data issue, not a fake preview-mode fallback
 - the roadmap infographic is a living planning artifact and should be updated as major milestones are completed or reprioritized
+- Website Health is now backend-first and should be expanded through the page registry/report APIs rather than by forcing it into the old flat dashboard payload

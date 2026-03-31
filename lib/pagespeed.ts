@@ -1,26 +1,36 @@
 import { getEnv } from "@/lib/env";
+import {
+  getMetricStatusFromValue,
+  mapCruxCategoryToStatus,
+  normalizeClsPercentile,
+  type WebsiteMetricHealthCategory,
+  type WebsiteHealthStrategyParam,
+} from "@/lib/website-health";
 
-export type PageSpeedStrategy = "mobile" | "desktop";
+export type PageSpeedMetricSnapshot = {
+  value: number | null;
+  status: WebsiteMetricHealthCategory | null;
+  source: "PAGE" | "ORIGIN" | null;
+};
 
-export type PageSpeedSnapshot = {
+export type PageSpeedVitalsSnapshot = {
   requestedUrl: string;
   finalUrl: string;
-  strategy: PageSpeedStrategy;
+  strategy: WebsiteHealthStrategyParam;
   fetchedAt: string;
-  performanceScore: number | null;
-  largestContentfulPaintMs: number | null;
-  firstContentfulPaintMs: number | null;
-  speedIndexMs: number | null;
-  totalBlockingTimeMs: number | null;
-  cumulativeLayoutShift: number | null;
-  loadingExperienceCategory: string | null;
-  originLoadingExperienceCategory: string | null;
+  pageDataScope: "PAGE" | "ORIGIN";
+  lcpMs: number | null;
+  inpMs: number | null;
+  cls: number | null;
+  lcpCategory: WebsiteMetricHealthCategory | null;
+  inpCategory: WebsiteMetricHealthCategory | null;
+  clsCategory: WebsiteMetricHealthCategory | null;
   raw: unknown;
 };
 
-type LighthouseAudit = {
-  numericValue?: number;
-  displayValue?: string;
+type CruxMetric = {
+  percentile?: number;
+  category?: string;
 };
 
 type PageSpeedResponse = {
@@ -28,20 +38,16 @@ type PageSpeedResponse = {
   analysisUTCTimestamp?: string;
   loadingExperience?: {
     overall_category?: string;
+    metrics?: Record<string, CruxMetric | undefined>;
   };
   originLoadingExperience?: {
     overall_category?: string;
+    metrics?: Record<string, CruxMetric | undefined>;
   };
   lighthouseResult?: {
     requestedUrl?: string;
     finalUrl?: string;
     fetchTime?: string;
-    audits?: Record<string, LighthouseAudit | undefined>;
-    categories?: {
-      performance?: {
-        score?: number;
-      };
-    };
     runtimeError?: {
       code?: string;
       message?: string;
@@ -49,27 +55,50 @@ type PageSpeedResponse = {
   };
 };
 
-function getAuditNumericValue(
-  audits: Record<string, LighthouseAudit | undefined> | undefined,
+function getPercentileMetric(
+  pageMetrics: Record<string, CruxMetric | undefined> | undefined,
+  originMetrics: Record<string, CruxMetric | undefined> | undefined,
   key: string,
-) {
-  const value = audits?.[key]?.numericValue;
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+  transform?: (value: number | null) => number | null,
+): PageSpeedMetricSnapshot {
+  const pageMetric = pageMetrics?.[key];
+  const originMetric = originMetrics?.[key];
+  const sourceMetric = pageMetric?.percentile !== undefined ? pageMetric : originMetric;
+  const source = pageMetric?.percentile !== undefined ? "PAGE" : originMetric?.percentile !== undefined ? "ORIGIN" : null;
+  const rawValue =
+    typeof sourceMetric?.percentile === "number" && Number.isFinite(sourceMetric.percentile)
+      ? sourceMetric.percentile
+      : null;
+  const value = transform ? transform(rawValue) : rawValue;
+  const status =
+    mapCruxCategoryToStatus(sourceMetric?.category) ??
+    (key === "LARGEST_CONTENTFUL_PAINT_MS"
+      ? getMetricStatusFromValue("lcpMs", value)
+      : key === "INTERACTION_TO_NEXT_PAINT"
+        ? getMetricStatusFromValue("inpMs", value)
+        : getMetricStatusFromValue("cls", value));
+
+  return {
+    value,
+    status,
+    source,
+  };
 }
 
 export async function fetchPageSpeedSnapshot(
   targetUrl: string,
-  strategy: PageSpeedStrategy = "mobile",
-): Promise<PageSpeedSnapshot> {
+  strategy: WebsiteHealthStrategyParam = "mobile",
+): Promise<PageSpeedVitalsSnapshot> {
   const env = getEnv();
+  if (!env.PAGESPEED_API_KEY) {
+    throw new Error("PAGESPEED_API_KEY is required for website-health sync.");
+  }
+
   const url = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
   url.searchParams.set("url", targetUrl);
   url.searchParams.set("strategy", strategy);
   url.searchParams.set("category", "performance");
-
-  if (env.PAGESPEED_API_KEY) {
-    url.searchParams.set("key", env.PAGESPEED_API_KEY);
-  }
+  url.searchParams.set("key", env.PAGESPEED_API_KEY);
 
   const response = await fetch(url, {
     method: "GET",
@@ -82,7 +111,7 @@ export async function fetchPageSpeedSnapshot(
   if (!response.ok) {
     if (response.status === 429) {
       throw new Error(
-        "PageSpeed request failed with status 429. Configure PAGESPEED_API_KEY for automated website-health syncs.",
+        "PageSpeed request failed with status 429. PAGESPEED_API_KEY is configured, but the project is being rate limited.",
       );
     }
 
@@ -95,8 +124,19 @@ export async function fetchPageSpeedSnapshot(
     throw new Error(`PageSpeed runtime error: ${runtimeError.message}`);
   }
 
-  const audits = json.lighthouseResult?.audits;
-  const performanceScore = json.lighthouseResult?.categories?.performance?.score;
+  const pageMetrics = json.loadingExperience?.metrics;
+  const originMetrics = json.originLoadingExperience?.metrics;
+  const lcp = getPercentileMetric(pageMetrics, originMetrics, "LARGEST_CONTENTFUL_PAINT_MS");
+  const inp = getPercentileMetric(pageMetrics, originMetrics, "INTERACTION_TO_NEXT_PAINT");
+  const cls = getPercentileMetric(
+    pageMetrics,
+    originMetrics,
+    "CUMULATIVE_LAYOUT_SHIFT_SCORE",
+    normalizeClsPercentile,
+  );
+
+  const pageDataScope =
+    lcp.source === "PAGE" && inp.source === "PAGE" && cls.source === "PAGE" ? "PAGE" : "ORIGIN";
 
   return {
     requestedUrl: json.lighthouseResult?.requestedUrl ?? targetUrl,
@@ -104,17 +144,13 @@ export async function fetchPageSpeedSnapshot(
     strategy,
     fetchedAt:
       json.lighthouseResult?.fetchTime ?? json.analysisUTCTimestamp ?? new Date().toISOString(),
-    performanceScore:
-      typeof performanceScore === "number" && Number.isFinite(performanceScore)
-        ? performanceScore * 100
-        : null,
-    largestContentfulPaintMs: getAuditNumericValue(audits, "largest-contentful-paint"),
-    firstContentfulPaintMs: getAuditNumericValue(audits, "first-contentful-paint"),
-    speedIndexMs: getAuditNumericValue(audits, "speed-index"),
-    totalBlockingTimeMs: getAuditNumericValue(audits, "total-blocking-time"),
-    cumulativeLayoutShift: getAuditNumericValue(audits, "cumulative-layout-shift"),
-    loadingExperienceCategory: json.loadingExperience?.overall_category ?? null,
-    originLoadingExperienceCategory: json.originLoadingExperience?.overall_category ?? null,
+    pageDataScope,
+    lcpMs: lcp.value,
+    inpMs: inp.value,
+    cls: cls.value,
+    lcpCategory: lcp.status,
+    inpCategory: inp.status,
+    clsCategory: cls.status,
     raw: json,
   };
 }
