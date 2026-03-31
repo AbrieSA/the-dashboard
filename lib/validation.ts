@@ -35,6 +35,17 @@ export const targetRowSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const pagespeedStrategySchema = z.enum(["mobile", "desktop"]);
+
+export const websiteHealthSyncRequestSchema = z.object({
+  url: z.url().optional(),
+  strategy: pagespeedStrategySchema.default("mobile"),
+  timegrain: timegrainSchema.default("WEEK"),
+  observedAt: z.iso.datetime().optional(),
+  notes: z.string().optional(),
+});
+
 export type IngestionPayload = z.infer<typeof ingestionPayloadSchema>;
 export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
 export type TargetRow = z.infer<typeof targetRowSchema>;
+export type WebsiteHealthSyncRequest = z.infer<typeof websiteHealthSyncRequestSchema>;

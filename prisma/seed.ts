@@ -14,6 +14,7 @@ const activeMetricKeys = new Set([
   "google_ads_prospects",
   "google_ads_prospects_to_applications",
   "google_ads_prospects_to_arrival",
+  "website_speed",
 ]);
 
 const groups = [

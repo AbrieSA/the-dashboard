@@ -34,6 +34,7 @@ This is important. If metric logic changes later, the codebase should be the mai
 Approved active scope:
 - `Follow Up Health`
 - `Google Ads` inside `Prospect Source Health`
+- `Website Speed` as the first Website Health pilot metric
 
 Confirmed working in production:
 - weekly Follow Up ingestion and calculations
@@ -66,6 +67,7 @@ What is already working:
 - production dashboard displays active metrics and targets correctly
 - dashboard view switching is stabilized with a short server-side snapshot cache
 - dashboard cache is invalidated after ingest and target sync so fresh data appears quickly
+- there is now an app-owned PageSpeed sync route for `website_speed`
 
 What is not done yet:
 - scheduled/fully real Zapier source mappings beyond the current validated test payloads
@@ -119,6 +121,10 @@ If the user changes business logic, update these docs first or immediately after
 
 `app/api/sync-targets/route.ts`
 - authenticated endpoint to sync Google Sheet target values
+
+`app/api/website-health/sync/route.ts`
+- authenticated endpoint that calls Google PageSpeed Insights directly
+- currently stores `website_speed` as Lighthouse LCP in milliseconds
 
 `app/api/dashboard/route.ts`
 - JSON dashboard snapshot endpoint
@@ -174,6 +180,10 @@ If the user changes business logic, update these docs first or immediately after
 `lib/targets.ts`
 - syncs Google Sheet target rows into Postgres
 - uses a bulk insert path that is compatible with the Supabase pooler
+
+`lib/pagespeed.ts`
+- app-owned client for Google's PageSpeed Insights API
+- currently used to fetch the first Website Health metric directly without Zapier
 
 ## Database Model
 
@@ -235,6 +245,7 @@ The app then calculates the derived dashboard metrics from those raw observation
 Practical note:
 - switching between `WEEK`, `MONTH`, and `YEAR` still triggers fresh dashboard reads, but those reads are now protected by a short cache
 - if the UI shows a connection issue, treat it as a real runtime/data-access problem, not a preview-mode fallback
+- Website Health now mixes patterns: Zapier for business/source metrics, direct app-side API sync for PageSpeed-based website speed
 
 ### Targets sheet
 
@@ -250,6 +261,15 @@ Current live setup:
 - the targets tab is in the same workbook as the planning sheet
 - production uses `GOOGLE_TARGETS_CSV_URL` to fetch the public CSV export for that targets tab
 - `/api/sync-targets` has been tested successfully in production
+
+### Website health sync
+
+The current Website Health implementation is intentionally narrow:
+- only `website_speed` is wired
+- it is populated from Google PageSpeed Insights
+- the default test URL is `https://www.ywamships.org/`
+- the route supports `WEEK`, `MONTH`, and `YEAR` observations, but for lab-style speed metrics you should prefer real weekly/monthly snapshots over derived rollups
+- Google's docs say the API can work without a key, but in practice automated use can hit rate limits, so treat `PAGESPEED_API_KEY` as required for production reliability
 
 ## Frontend Intent
 

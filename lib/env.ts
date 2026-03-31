@@ -9,6 +9,9 @@ const envSchema = z.object({
   INGESTION_API_KEY: z.string().min(12),
   GOOGLE_TARGETS_SYNC_KEY: z.string().min(12),
   GOOGLE_TARGETS_CSV_URL: z.string().url().optional(),
+  WEBSITE_HEALTH_SYNC_KEY: z.string().min(12).optional(),
+  PAGESPEED_API_KEY: z.string().min(12).optional(),
+  PAGESPEED_DEFAULT_URL: z.string().url().optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

@@ -9,6 +9,8 @@ Current high-level status:
 - approved v1 scope is working end-to-end:
   - `Follow Up Health`
   - `Google Ads`
+- first Website Health implementation now exists:
+  - direct app-owned PageSpeed sync for `website_speed`
 - weekly and monthly ingestion are working
 - Google Sheets target sync is working
 - dashboard view switching has been stabilized with:
