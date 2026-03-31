@@ -47,11 +47,14 @@
 
 .actions {
   display: flex;
+  gap: 12px;
   flex-shrink: 0;
 }
 
 .addButton,
+.refreshButton,
 .saveButton,
+.secondaryAction,
 .expandButton,
 .pageTitleButton {
   appearance: none;
@@ -61,15 +64,38 @@
 }
 
 .addButton,
+.refreshButton,
 .saveButton {
   align-items: center;
-  background: linear-gradient(135deg, #2f68ff 0%, #5b8eff 100%);
   border-radius: 999px;
-  color: white;
   display: inline-flex;
   gap: 8px;
   font-weight: 700;
   padding: 12px 18px;
+}
+
+.addButton,
+.saveButton {
+  background: linear-gradient(135deg, #2f68ff 0%, #5b8eff 100%);
+  color: white;
+}
+
+.refreshButton,
+.secondaryAction {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(181, 196, 217, 0.92);
+  color: #5f799d;
+}
+
+.secondaryAction {
+  padding: 10px 14px;
+}
+
+.refreshButton:disabled,
+.saveButton:disabled,
+.secondaryAction:disabled {
+  cursor: default;
+  opacity: 0.7;
 }
 
 .addCard {
@@ -296,6 +322,10 @@
   padding: 10px 0;
 }
 
+.spinningIcon {
+  animation: spin 1s linear infinite;
+}
+
 .expandedPanel {
   background: linear-gradient(180deg, rgba(245, 249, 255, 0.88) 0%, rgba(255, 255, 255, 0.95) 100%);
   border-top: 1px solid rgba(201, 213, 231, 0.8);
@@ -476,6 +506,10 @@
     justify-content: space-between;
     width: 100%;
   }
+
+  .actions {
+    width: 100%;
+  }
 }
 
 @media (max-width: 640px) {
@@ -500,5 +534,15 @@
   .pageUrl {
     max-width: 100%;
     white-space: normal;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }

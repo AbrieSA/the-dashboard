@@ -1,6 +1,15 @@
 "use client";
 
-import { Activity, ChevronDown, ChevronRight, Globe, LaptopMinimal, MonitorSmartphone, Plus } from "lucide-react";
+import {
+  Activity,
+  ChevronDown,
+  ChevronRight,
+  Globe,
+  LaptopMinimal,
+  MonitorSmartphone,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useState, useTransition } from "react";
 
@@ -230,7 +239,11 @@ export function WebsiteHealthPage({
   const [url, setUrl] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [refreshingPageId, setRefreshingPageId] = useState<string | null>(null);
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function toggleExpanded(pageId: string) {
@@ -243,6 +256,8 @@ export function WebsiteHealthPage({
     event.preventDefault();
     setFormError(null);
     setFormSuccess(null);
+    setRefreshMessage(null);
+    setRefreshError(null);
     setIsSaving(true);
 
     try {
@@ -269,12 +284,59 @@ export function WebsiteHealthPage({
       setLabel("");
       setUrl("");
       setIsFormOpen(false);
-      setFormSuccess("Page added. It will appear in the list after refresh.");
+      setFormSuccess("Page added. Use Refresh now to fetch performance data for it.");
       startTransition(() => {
         router.refresh();
       });
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleRefresh(pageId?: string) {
+    setRefreshMessage(null);
+    setRefreshError(null);
+
+    if (pageId) {
+      setRefreshingPageId(pageId);
+    } else {
+      setIsRefreshingAll(true);
+    }
+
+    try {
+      const response = await fetch("/api/website-health/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pageIds: pageId ? [pageId] : undefined,
+          strategies: strategy === "all" ? ["mobile", "desktop"] : [strategy],
+          timegrains: [timegrain],
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; updatedCount?: number; syncedCount?: number; failedCount?: number }
+        | null;
+
+      if (!response.ok) {
+        setRefreshError(payload?.error ?? "Refresh failed. Please try again.");
+        return;
+      }
+
+      const totalTouched = (payload?.updatedCount ?? 0) + (payload?.syncedCount ?? 0);
+      setRefreshMessage(
+        pageId
+          ? `Fresh performance data pulled for this page${totalTouched > 0 ? "." : ", but no rows were updated."}`
+          : `Fresh performance data pulled for ${totalTouched} snapshot${totalTouched === 1 ? "" : "s"}.`,
+      );
+      startTransition(() => {
+        router.refresh();
+      });
+    } finally {
+      setRefreshingPageId(null);
+      setIsRefreshingAll(false);
     }
   }
 
@@ -292,6 +354,15 @@ export function WebsiteHealthPage({
           </div>
 
           <div className={styles.actions}>
+            <button
+              className={styles.refreshButton}
+              disabled={isRefreshingAll || isPending}
+              onClick={() => void handleRefresh()}
+              type="button"
+            >
+              <RefreshCw className={isRefreshingAll ? styles.spinningIcon : ""} size={16} />
+              {isRefreshingAll ? "Refreshing..." : "Refresh current view"}
+            </button>
             <button
               className={styles.addButton}
               onClick={() => setIsFormOpen((current) => !current)}
@@ -337,6 +408,8 @@ export function WebsiteHealthPage({
         ) : null}
 
         {formSuccess ? <p className={`${styles.formMessage} ${styles.successMessage}`}>{formSuccess}</p> : null}
+        {refreshMessage ? <p className={`${styles.formMessage} ${styles.successMessage}`}>{refreshMessage}</p> : null}
+        {refreshError ? <p className={`${styles.formMessage} ${styles.errorMessage}`}>{refreshError}</p> : null}
         {runtimeMessage ? <div className={styles.runtimeCard}>{runtimeMessage}</div> : null}
 
         <div className={styles.contextBar}>
@@ -382,6 +455,16 @@ export function WebsiteHealthPage({
                       </div>
                       <div className={styles.scoreCaption}>Performance</div>
                     </div>
+
+                    <button
+                      className={styles.secondaryAction}
+                      disabled={refreshingPageId === row.page.id || isPending}
+                      onClick={() => void handleRefresh(row.page.id)}
+                      type="button"
+                    >
+                      <RefreshCw className={refreshingPageId === row.page.id ? styles.spinningIcon : ""} size={15} />
+                      {refreshingPageId === row.page.id ? "Refreshing..." : "Refresh"}
+                    </button>
 
                     <button className={styles.expandButton} onClick={() => toggleExpanded(row.page.id)} type="button">
                       {isExpanded ? "Collapse" : "Expand"}
