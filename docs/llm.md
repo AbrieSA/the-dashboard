@@ -13,6 +13,7 @@ Current high-level status:
   - direct app-owned PageSpeed sync
   - monitored page registry
   - dedicated report API with `mobile`, `desktop`, and `all`
+  - dedicated `/website-health` page with expandable rows and frontend page creation
 - weekly and monthly ingestion are working
 - Google Sheets target sync is working
 - dashboard view switching has been stabilized with:
@@ -37,3 +38,4 @@ Default assumptions:
 - if the dashboard shows a connection problem, treat it as a real runtime data issue, not a fake preview-mode fallback
 - the roadmap infographic is a living planning artifact and should be updated as major milestones are completed or reprioritized
 - Website Health is now backend-first and should be expanded through the page registry/report APIs rather than by forcing it into the old flat dashboard payload
+- the main dashboard and Website Health now share a common top header, so navigation changes should usually be made there instead of duplicating page-specific nav

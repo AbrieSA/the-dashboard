@@ -41,6 +41,7 @@ Confirmed working in production:
 - monthly Follow Up ingestion and calculations
 - weekly Google Ads ingestion and calculations
 - Google Sheets target sync for active metrics
+- dedicated Website Health page route with expandable page rows, strategy filters, and frontend add-page support
 
 Deferred for now:
 - `Organic Website`
@@ -139,6 +140,11 @@ If the user changes business logic, update these docs first or immediately after
 `app/api/website-health/pages/[id]/route.ts`
 - authenticated page-registry update endpoint
 
+`app/website-health/page.tsx`
+- dedicated Website Health screen
+- reads the Website Health report directly from the service layer
+- supports `WEEK` / `MONTH` and `all` / `mobile` / `desktop` viewing
+
 `app/api/dashboard/route.ts`
 - JSON dashboard snapshot endpoint
 
@@ -161,6 +167,16 @@ If the user changes business logic, update these docs first or immediately after
 
 `components/TrendChart.tsx`
 - sparkline/trend display
+
+`components/AppShellHeader.tsx`
+- shared authenticated header for dashboard-area pages
+- holds the Overview / Website Health navigation
+
+`components/WebsiteHealthPage.tsx`
+- client-side Website Health screen
+- expandable rows
+- collapsed average performance score
+- frontend create-page flow wired to the protected page-registry API
 
 ### Library code
 

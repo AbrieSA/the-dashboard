@@ -26,6 +26,7 @@ export type WebsiteHealthReportStrategy = "all" | WebsiteHealthStrategyParam;
 export type WebsiteHealthTimegrain = "WEEK" | "MONTH";
 
 export type WebsiteHealthMetricSlot = {
+  performanceScore: number | null;
   lcpMs: number | null;
   inpMs: number | null;
   cls: number | null;
@@ -52,11 +53,22 @@ export type WebsiteHealthReportRow = {
   };
 };
 
+export type WebsiteHealthReportPage = WebsiteHealthReportRow["page"];
+
+export type WebsiteHealthReportResult = {
+  timegrain: WebsiteHealthTimegrain;
+  periodStart: string;
+  strategy: WebsiteHealthReportStrategy;
+  pages: WebsiteHealthReportPage[];
+  rows: WebsiteHealthReportRow[];
+};
+
 type SnapshotRecord = Pick<
   WebsiteHealthSnapshot,
   | "strategy"
   | "pageDataScope"
   | "fetchedAt"
+  | "rawJson"
   | "lcpMs"
   | "inpMs"
   | "cls"
@@ -134,6 +146,45 @@ export function getMetricStatusFromValue(
   return "POOR";
 }
 
+export function getPerformanceScoreFromRawJson(rawJson: unknown) {
+  if (!rawJson || typeof rawJson !== "object") {
+    return null;
+  }
+
+  const lighthouseResult =
+    "lighthouseResult" in rawJson && rawJson.lighthouseResult && typeof rawJson.lighthouseResult === "object"
+      ? rawJson.lighthouseResult
+      : null;
+  const categories =
+    lighthouseResult &&
+    "categories" in lighthouseResult &&
+    lighthouseResult.categories &&
+    typeof lighthouseResult.categories === "object"
+      ? lighthouseResult.categories
+      : null;
+  const performanceCategory =
+    categories &&
+    "performance" in categories &&
+    categories.performance &&
+    typeof categories.performance === "object"
+      ? categories.performance
+      : null;
+  const score =
+    performanceCategory &&
+    "score" in performanceCategory &&
+    typeof performanceCategory.score === "number" &&
+    Number.isFinite(performanceCategory.score)
+      ? performanceCategory.score
+      : null;
+
+  if (score === null) {
+    return null;
+  }
+
+  const normalizedScore = score <= 1 ? score * 100 : score;
+  return Math.round(normalizedScore);
+}
+
 export function getWebsiteHealthPeriodStart(date: Date, timegrain: WebsiteHealthTimegrain) {
   return startOfTimegrain(date, timegrain);
 }
@@ -179,6 +230,7 @@ export function buildWebsiteHealthSlot(snapshot: SnapshotRecord): WebsiteHealthM
   const cls = snapshot.cls === null ? null : Number(snapshot.cls);
 
   return {
+    performanceScore: getPerformanceScoreFromRawJson(snapshot.rawJson),
     lcpMs,
     inpMs,
     cls,

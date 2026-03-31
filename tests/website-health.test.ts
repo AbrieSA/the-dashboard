@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildWebsiteHealthReportRows,
   getMetricStatusFromValue,
+  getPerformanceScoreFromRawJson,
   mapCruxCategoryToStatus,
   normalizeClsPercentile,
   slugifyWebsitePageKey,
@@ -38,6 +39,22 @@ describe("getMetricStatusFromValue", () => {
   });
 });
 
+describe("getPerformanceScoreFromRawJson", () => {
+  it("normalizes Lighthouse scores to a 0-100 scale", () => {
+    expect(
+      getPerformanceScoreFromRawJson({
+        lighthouseResult: {
+          categories: {
+            performance: {
+              score: 0.41,
+            },
+          },
+        },
+      }),
+    ).toBe(41);
+  });
+});
+
 describe("buildWebsiteHealthReportRows", () => {
   it("returns both mobile and desktop slots for the all strategy", () => {
     const rows = buildWebsiteHealthReportRows(
@@ -64,6 +81,15 @@ describe("buildWebsiteHealthReportRows", () => {
           strategy: "MOBILE",
           pageDataScope: "PAGE",
           fetchedAt: new Date("2026-03-31T00:00:00.000Z"),
+          rawJson: {
+            lighthouseResult: {
+              categories: {
+                performance: {
+                  score: 0.91,
+                },
+              },
+            },
+          },
           lcpMs: 2400 as never,
           inpMs: 190 as never,
           cls: 0.08 as never,
@@ -83,6 +109,15 @@ describe("buildWebsiteHealthReportRows", () => {
           strategy: "DESKTOP",
           pageDataScope: "ORIGIN",
           fetchedAt: new Date("2026-03-31T00:00:00.000Z"),
+          rawJson: {
+            lighthouseResult: {
+              categories: {
+                performance: {
+                  score: 0.41,
+                },
+              },
+            },
+          },
           lcpMs: 4100 as never,
           inpMs: 280 as never,
           cls: 0.12 as never,
@@ -95,6 +130,8 @@ describe("buildWebsiteHealthReportRows", () => {
     );
 
     expect(rows).toHaveLength(1);
+    expect(rows[0]?.mobile?.performanceScore).toBe(91);
+    expect(rows[0]?.desktop?.performanceScore).toBe(41);
     expect(rows[0]?.mobile?.lcpStatus).toBe("GOOD");
     expect(rows[0]?.desktop?.lcpStatus).toBe("POOR");
     expect(rows[0]?.healthSummary.status).toBe("POOR");
