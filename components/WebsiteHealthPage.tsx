@@ -462,12 +462,22 @@ export function WebsiteHealthPage({
                 {isExpanded ? (
                   <div className={styles.expandedPanel}>
                     <div className={styles.assessmentBar}>
-                      <div className={styles.assessmentTitle}>
-                        <Activity size={18} />
-                        <span>
-                          Core Web Vitals Assessment:{" "}
-                          <strong className={getAssessmentTone(row.healthSummary.status)}>{assessmentLabel}</strong>
-                        </span>
+                      <div className={styles.assessmentMeta}>
+                        <div className={styles.assessmentTitle}>
+                          <Activity size={18} />
+                          <span>
+                            Core Web Vitals Assessment:{" "}
+                            <strong className={getAssessmentTone(row.healthSummary.status)}>{assessmentLabel}</strong>
+                          </span>
+                        </div>
+                        <a
+                          className={styles.detailsLink}
+                          href="https://cruxvis.withgoogle.com/"
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          More details
+                        </a>
                       </div>
                       <div className={styles.assessmentHint}>
                         {strategy === "all" ? "Showing both device categories" : `Showing ${strategy} data`}

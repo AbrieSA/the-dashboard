@@ -317,6 +317,11 @@
   margin-bottom: 18px;
 }
 
+.assessmentMeta {
+  display: grid;
+  gap: 10px;
+}
+
 .assessmentTitle {
   align-items: center;
   color: #26415f;
@@ -324,6 +329,27 @@
   gap: 10px;
   font-size: 1rem;
   font-weight: 700;
+}
+
+.detailsLink {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(181, 196, 217, 0.92);
+  border-radius: 999px;
+  color: #5f799d;
+  display: inline-flex;
+  font-size: 0.86rem;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.detailsLink:hover {
+  border-color: rgba(95, 121, 157, 0.55);
+  color: #3f5f88;
 }
 
 .assessmentHint {
