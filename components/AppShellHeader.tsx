@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { logoutAction } from "@/app/actions";
 
 type AppShellHeaderProps = {
-  activePage: "overview" | "website-health";
+  activePage: "overview" | "follow-up" | "sources" | "website-health";
   hasRuntimeError?: boolean;
   children?: ReactNode;
 };
@@ -32,6 +32,12 @@ export function AppShellHeader({
         <div className="toolbar">
           <Link className={activePage === "overview" ? "button" : "button-secondary"} href="/">
             Overview
+          </Link>
+          <Link className={activePage === "follow-up" ? "button" : "button-secondary"} href="/follow-up">
+            Follow Up
+          </Link>
+          <Link className={activePage === "sources" ? "button" : "button-secondary"} href="/sources">
+            Sources
           </Link>
           <Link
             className={activePage === "website-health" ? "button" : "button-secondary"}

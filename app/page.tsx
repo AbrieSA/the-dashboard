@@ -1,6 +1,5 @@
-import Link from "next/link";
-
-import { DashboardView } from "@/components/DashboardView";
+import { AppShellHeader } from "@/components/AppShellHeader";
+import { OverviewLanding } from "@/components/OverviewLanding";
 import { getDashboardSnapshot } from "@/lib/dashboard";
 import type { DashboardGroupView, DashboardRuntimeStatus } from "@/lib/dashboard-types";
 import { dashboardQuerySchema } from "@/lib/validation";
@@ -35,26 +34,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   return (
-    <>
-      <div
-        style={{
-          bottom: "24px",
-          position: "fixed",
-          right: "24px",
-          zIndex: 50,
-        }}
-      >
-        <Link className="button" href="/website-health?strategy=all">
-          Website Health
-        </Link>
+    <main className="dashboard-app">
+      <AppShellHeader activePage="overview" hasRuntimeError={runtimeStatus === "error"} />
+      <div className="dashboard-page shell page-grid">
+        <OverviewLanding
+          groups={groups}
+          runtimeStatus={runtimeStatus}
+          runtimeMessage={runtimeMessage}
+        />
       </div>
-
-      <DashboardView
-        groups={groups}
-        timegrain={query.timegrain}
-        runtimeStatus={runtimeStatus}
-        runtimeMessage={runtimeMessage}
-      />
-    </>
+    </main>
   );
 }

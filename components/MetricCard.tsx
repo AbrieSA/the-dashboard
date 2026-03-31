@@ -10,9 +10,10 @@ type MetricCardProps = {
   metric: DashboardMetricView;
   onSelect?: () => void;
   selected?: boolean;
+  mode?: "simple" | "detailed";
 };
 
-export function MetricCard({ metric, tone, onSelect, selected = false }: MetricCardProps) {
+export function MetricCard({ metric, tone, onSelect, selected = false, mode = "detailed" }: MetricCardProps) {
   const status = getMetricStatus(metric);
   const StatusIcon =
     status.tone === "success"
@@ -23,6 +24,8 @@ export function MetricCard({ metric, tone, onSelect, selected = false }: MetricC
           ? Minus
           : ArrowUpRight;
   const CardIcon = tone === "green" ? Target : tone === "amber" ? Gauge : Activity;
+  const isSimple = mode === "simple";
+
   const content = (
     <>
       <div className="metric-top">
@@ -40,11 +43,13 @@ export function MetricCard({ metric, tone, onSelect, selected = false }: MetricC
           <strong>{formatMetricValue(metric.latestValue, metric.unit)}</strong>
           <span className="metric-subvalue">{metric.subcategory ?? "Core metric"}</span>
         </div>
-        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "0.82rem" }}>
-          {metric.latestObservedAt
-            ? `Latest update ${new Date(metric.latestObservedAt).toLocaleString()}`
-            : "No observations loaded yet"}
-        </p>
+        {!isSimple ? (
+          <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "0.82rem" }}>
+            {metric.latestObservedAt
+              ? `Latest update ${new Date(metric.latestObservedAt).toLocaleString()}`
+              : "No observations loaded yet"}
+          </p>
+        ) : null}
       </div>
 
       <span className={`status ${status.tone}`}>
@@ -52,22 +57,24 @@ export function MetricCard({ metric, tone, onSelect, selected = false }: MetricC
         {status.label} · {formatDelta(metric.delta, metric.unit)}
       </span>
 
-      <TrendChart data={metric.sparkline} />
+      {!isSimple ? <TrendChart data={metric.sparkline} /> : null}
 
-      <div className="target-stack">
-        <div className="target-row">
-          <span>Current</span>
-          <span>{formatMetricValue(metric.targets.current, metric.unit)}</span>
+      {!isSimple ? (
+        <div className="target-stack">
+          <div className="target-row">
+            <span>Current</span>
+            <span>{formatMetricValue(metric.targets.current, metric.unit)}</span>
+          </div>
+          <div className="target-row">
+            <span>Standard</span>
+            <span>{formatMetricValue(metric.targets.standard, metric.unit)}</span>
+          </div>
+          <div className="target-row">
+            <span>Desired</span>
+            <span>{formatMetricValue(metric.targets.desired, metric.unit)}</span>
+          </div>
         </div>
-        <div className="target-row">
-          <span>Standard</span>
-          <span>{formatMetricValue(metric.targets.standard, metric.unit)}</span>
-        </div>
-        <div className="target-row">
-          <span>Desired</span>
-          <span>{formatMetricValue(metric.targets.desired, metric.unit)}</span>
-        </div>
-      </div>
+      ) : null}
     </>
   );
 

@@ -238,6 +238,72 @@ select {
   gap: 16px;
 }
 
+
+.chooser-panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.chooser-panel h2 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.chooser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.chooser-card {
+  border: 1px solid var(--border);
+  background: var(--panel-strong);
+  border-radius: 14px;
+  padding: 16px;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  color: var(--ink);
+}
+
+.chooser-card strong {
+  font-size: 1rem;
+}
+
+.chooser-card span:last-child {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.category-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.view-toggle {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.bulk-toggle {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.simple-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .tab-strip {
   display: flex;
   gap: 8px;
