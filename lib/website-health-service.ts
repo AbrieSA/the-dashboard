@@ -29,7 +29,6 @@ function serializeSyncPayload(input: Record<string, unknown>) {
 }
 
 async function upsertLegacyWebsiteSpeedObservation(args: {
-  tx: Prisma.TransactionClient;
   periodStart: Date;
   timegrain: WebsiteHealthTimegrain;
   lcpMs: number | null;
@@ -40,7 +39,7 @@ async function upsertLegacyWebsiteSpeedObservation(args: {
     return;
   }
 
-  const metricDefinition = await args.tx.metricDefinition.findUnique({
+  const metricDefinition = await prisma.metricDefinition.findUnique({
     where: { key: "website_speed" },
   });
 
@@ -49,13 +48,13 @@ async function upsertLegacyWebsiteSpeedObservation(args: {
   }
 
   if (!metricDefinition.isActive) {
-    await args.tx.metricDefinition.update({
+    await prisma.metricDefinition.update({
       where: { id: metricDefinition.id },
       data: { isActive: true },
     });
   }
 
-  const existing = await args.tx.metricObservation.findFirst({
+  const existing = await prisma.metricObservation.findFirst({
     where: {
       metricDefinitionId: metricDefinition.id,
       sourceSystem: SourceSystem.WEBSITE_PERFORMANCE,
@@ -81,14 +80,14 @@ async function upsertLegacyWebsiteSpeedObservation(args: {
   };
 
   if (existing) {
-    await args.tx.metricObservation.update({
+    await prisma.metricObservation.update({
       where: { id: existing.id },
       data,
     });
     return;
   }
 
-  await args.tx.metricObservation.create({
+  await prisma.metricObservation.create({
     data: {
       metricDefinitionId: metricDefinition.id,
       ...data,
@@ -266,128 +265,122 @@ export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
       for (const timegrain of normalized.timegrains) {
         const periodStart = getWebsiteHealthPeriodStart(normalized.observedAt, timegrain);
         const externalRunId = buildWebsiteHealthExternalRunId(page.key, strategy, timegrain, periodStart);
+        const strategyEnum = toWebsitePerformanceStrategy(strategy);
+        const payloadJson = serializeSyncPayload({
+          pageId: page.id,
+          pageKey: page.key,
+          pageUrl: page.url,
+          strategy,
+          timegrain,
+          periodStart: periodStart.toISOString(),
+          notes: normalized.notes,
+        });
+        let sourceRunId: string | null = null;
 
         try {
-          const writeResult = await prisma.$transaction(async (tx) => {
-            const existingSnapshot = await tx.websiteHealthSnapshot.findUnique({
-              where: {
-                websitePageId_strategy_timegrain_periodStart: {
-                  websitePageId: page.id,
-                  strategy: toWebsitePerformanceStrategy(strategy),
-                  timegrain: timegrain as Timegrain,
-                  periodStart,
-                },
-              },
-            });
-
-            const payloadJson = serializeSyncPayload({
-              pageId: page.id,
-              pageKey: page.key,
-              pageUrl: page.url,
-              strategy,
-              timegrain,
-              periodStart: periodStart.toISOString(),
-              notes: normalized.notes,
-            });
-
-            const sourceRun = await tx.sourceRun.upsert({
-              where: {
-                sourceSystem_externalRunId: {
-                  sourceSystem: SourceSystem.WEBSITE_PERFORMANCE,
-                  externalRunId,
-                },
-              },
-              update: {
-                status: SourceRunStatus.PENDING,
-                payloadJson,
-                errorMessage: null,
-                completedAt: null,
-              },
-              create: {
-                sourceSystem: SourceSystem.WEBSITE_PERFORMANCE,
-                externalRunId,
-                status: SourceRunStatus.PENDING,
-                payloadJson,
-              },
-            });
-
-            await tx.websiteHealthSnapshot.upsert({
-              where: {
-                websitePageId_strategy_timegrain_periodStart: {
-                  websitePageId: page.id,
-                  strategy: toWebsitePerformanceStrategy(strategy),
-                  timegrain: timegrain as Timegrain,
-                  periodStart,
-                },
-              },
-              update: {
-                fetchedAt: new Date(snapshot.fetchedAt),
-                pageDataScope: snapshot.pageDataScope,
-                lcpMs: snapshot.lcpMs,
-                inpMs: snapshot.inpMs,
-                cls: snapshot.cls,
-                lcpCategory: snapshot.lcpCategory,
-                inpCategory: snapshot.inpCategory,
-                clsCategory: snapshot.clsCategory,
-                requestedUrl: snapshot.requestedUrl,
-                finalUrl: snapshot.finalUrl,
-                rawJson: snapshot.raw as Prisma.InputJsonValue,
-                sourceRunId: sourceRun.id,
-              },
-              create: {
+          const existingSnapshot = await prisma.websiteHealthSnapshot.findUnique({
+            where: {
+              websitePageId_strategy_timegrain_periodStart: {
                 websitePageId: page.id,
-                strategy: toWebsitePerformanceStrategy(strategy),
+                strategy: strategyEnum,
                 timegrain: timegrain as Timegrain,
                 periodStart,
-                fetchedAt: new Date(snapshot.fetchedAt),
-                pageDataScope: snapshot.pageDataScope,
+              },
+            },
+          });
+
+          const sourceRun = await prisma.sourceRun.upsert({
+            where: {
+              sourceSystem_externalRunId: {
+                sourceSystem: SourceSystem.WEBSITE_PERFORMANCE,
+                externalRunId,
+              },
+            },
+            update: {
+              status: SourceRunStatus.PENDING,
+              payloadJson,
+              errorMessage: null,
+              completedAt: null,
+            },
+            create: {
+              sourceSystem: SourceSystem.WEBSITE_PERFORMANCE,
+              externalRunId,
+              status: SourceRunStatus.PENDING,
+              payloadJson,
+            },
+          });
+          sourceRunId = sourceRun.id;
+
+          await prisma.websiteHealthSnapshot.upsert({
+            where: {
+              websitePageId_strategy_timegrain_periodStart: {
+                websitePageId: page.id,
+                strategy: strategyEnum,
+                timegrain: timegrain as Timegrain,
+                periodStart,
+              },
+            },
+            update: {
+              fetchedAt: new Date(snapshot.fetchedAt),
+              pageDataScope: snapshot.pageDataScope,
+              lcpMs: snapshot.lcpMs,
+              inpMs: snapshot.inpMs,
+              cls: snapshot.cls,
+              lcpCategory: snapshot.lcpCategory,
+              inpCategory: snapshot.inpCategory,
+              clsCategory: snapshot.clsCategory,
+              requestedUrl: snapshot.requestedUrl,
+              finalUrl: snapshot.finalUrl,
+              rawJson: snapshot.raw as Prisma.InputJsonValue,
+              sourceRunId,
+            },
+            create: {
+              websitePageId: page.id,
+              strategy: strategyEnum,
+              timegrain: timegrain as Timegrain,
+              periodStart,
+              fetchedAt: new Date(snapshot.fetchedAt),
+              pageDataScope: snapshot.pageDataScope,
+              lcpMs: snapshot.lcpMs,
+              inpMs: snapshot.inpMs,
+              cls: snapshot.cls,
+              lcpCategory: snapshot.lcpCategory,
+              inpCategory: snapshot.inpCategory,
+              clsCategory: snapshot.clsCategory,
+              requestedUrl: snapshot.requestedUrl,
+              finalUrl: snapshot.finalUrl,
+              rawJson: snapshot.raw as Prisma.InputJsonValue,
+              sourceRunId,
+            },
+          });
+
+          if (page.key === "home" && strategy === "mobile") {
+            await upsertLegacyWebsiteSpeedObservation({
+              periodStart,
+              timegrain,
+              lcpMs: snapshot.lcpMs,
+              sourceRunId,
+              rawJson: {
+                pageKey: page.key,
+                strategy,
+                timegrain,
                 lcpMs: snapshot.lcpMs,
                 inpMs: snapshot.inpMs,
                 cls: snapshot.cls,
-                lcpCategory: snapshot.lcpCategory,
-                inpCategory: snapshot.inpCategory,
-                clsCategory: snapshot.clsCategory,
-                requestedUrl: snapshot.requestedUrl,
-                finalUrl: snapshot.finalUrl,
-                rawJson: snapshot.raw as Prisma.InputJsonValue,
-                sourceRunId: sourceRun.id,
-              },
+                pageDataScope: snapshot.pageDataScope,
+                raw: snapshot.raw as Prisma.InputJsonValue,
+              } as Prisma.JsonObject,
             });
+          }
 
-            if (page.key === "home" && strategy === "mobile") {
-              await upsertLegacyWebsiteSpeedObservation({
-                tx,
-                periodStart,
-                timegrain,
-                lcpMs: snapshot.lcpMs,
-                sourceRunId: sourceRun.id,
-                rawJson: {
-                  pageKey: page.key,
-                  strategy,
-                  timegrain,
-                  lcpMs: snapshot.lcpMs,
-                  inpMs: snapshot.inpMs,
-                  cls: snapshot.cls,
-                  pageDataScope: snapshot.pageDataScope,
-                  raw: snapshot.raw as Prisma.InputJsonValue,
-                } as Prisma.JsonObject,
-              });
-            }
-
-            const updatedSourceRun = await tx.sourceRun.update({
-              where: { id: sourceRun.id },
-              data: {
-                status: SourceRunStatus.SUCCEEDED,
-                completedAt: new Date(),
-                observationCount: 1,
-                errorMessage: null,
-              },
-            });
-
-            return {
-              updated: Boolean(existingSnapshot),
-              sourceRunId: updatedSourceRun.id,
-            };
+          await prisma.sourceRun.update({
+            where: { id: sourceRunId },
+            data: {
+              status: SourceRunStatus.SUCCEEDED,
+              completedAt: new Date(),
+              observationCount: 1,
+              errorMessage: null,
+            },
           });
 
           results.push({
@@ -400,11 +393,11 @@ export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
             strategy,
             timegrain,
             periodStart: periodStart.toISOString(),
-            status: writeResult.updated ? "updated" : "created",
+            status: existingSnapshot ? "updated" : "created",
             pageDataScope: snapshot.pageDataScope,
           });
 
-          if (writeResult.updated) {
+          if (existingSnapshot) {
             updatedCount += 1;
           } else {
             syncedCount += 1;
@@ -412,6 +405,19 @@ export async function syncWebsiteHealth(input: WebsiteHealthSyncRequest) {
 
           successCount += 1;
         } catch (error) {
+          if (sourceRunId) {
+            await prisma.sourceRun
+              .update({
+                where: { id: sourceRunId },
+                data: {
+                  status: SourceRunStatus.FAILED,
+                  completedAt: new Date(),
+                  errorMessage: error instanceof Error ? error.message : "Unknown sync error.",
+                },
+              })
+              .catch(() => undefined);
+          }
+
           const reason = error instanceof Error ? error.message : "Unknown sync error.";
           results.push({
             page: {
