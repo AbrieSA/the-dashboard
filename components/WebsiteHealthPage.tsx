@@ -342,7 +342,7 @@ export function WebsiteHealthPage({
         <div className={styles.introRow}>
           <div>
             <p className={styles.eyebrow}>Website Health</p>
-            <h1 className={styles.heading}>Track each monitored page the way the team will actually use it.</h1>
+            <h1 className={styles.heading}>See our Health Ratings</h1>
           </div>
 
           <div className={styles.actions}>
@@ -449,8 +449,7 @@ export function WebsiteHealthPage({
                     </button>
 
                     <button className={styles.expandButton} onClick={() => toggleExpanded(row.page.id)} type="button">
-                      {isExpanded ? "Collapse" : "Expand"}
-                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                     </button>
                   </div>
                 </div>
