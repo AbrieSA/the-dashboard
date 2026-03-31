@@ -193,15 +193,15 @@
 .rowSummary {
   align-items: center;
   display: flex;
-  gap: 18px;
+  gap: 12px;
   justify-content: space-between;
-  padding: 18px 22px;
+  padding: 12px 16px;
 }
 
 .rowMain {
   align-items: center;
   display: flex;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -209,17 +209,17 @@
   align-items: center;
   background: linear-gradient(135deg, #ecf3ff 0%, #ffffff 100%);
   border: 1px solid rgba(191, 207, 231, 0.86);
-  border-radius: 16px;
+  border-radius: 12px;
   color: #5082ff;
   display: inline-flex;
-  height: 44px;
+  height: 34px;
   justify-content: center;
-  width: 44px;
+  width: 34px;
 }
 
 .pageMeta {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -227,7 +227,7 @@
   background: transparent;
   border: 0;
   color: #26374f;
-  font-size: 1.05rem;
+  font-size: 0.88rem;
   font-weight: 700;
   justify-self: start;
   padding: 0;
@@ -235,7 +235,7 @@
 
 .pageUrl {
   color: #7088a8;
-  font-size: 0.88rem;
+  font-size: 0.76rem;
   overflow: hidden;
   text-decoration: none;
   text-overflow: ellipsis;
@@ -245,29 +245,29 @@
 .rowActions {
   align-items: center;
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .scoreCard {
   align-items: center;
   background: #ffffff;
   border: 1px solid rgba(182, 196, 217, 0.92);
-  border-radius: 20px;
+  border-radius: 16px;
   box-shadow: 0 10px 24px rgba(123, 143, 175, 0.14);
   display: grid;
   justify-items: center;
-  min-width: 98px;
-  padding: 12px 14px 10px;
+  min-width: 72px;
+  padding: 8px 10px 7px;
 }
 
 .scoreRing {
   align-items: center;
   border-radius: 999px;
   display: grid;
-  height: 54px;
+  height: 42px;
   justify-items: center;
-  padding: 5px;
-  width: 54px;
+  padding: 4px;
+  width: 42px;
 }
 
 .scoreInner {
@@ -276,17 +276,17 @@
   border-radius: 999px;
   color: #213550;
   display: flex;
-  font-size: 1rem;
+  font-size: 0.82rem;
   font-weight: 800;
-  height: 44px;
+  height: 34px;
   justify-content: center;
-  width: 44px;
+  width: 34px;
 }
 
 .scoreCaption {
   color: #6f84a2;
-  font-size: 0.72rem;
-  margin-top: 8px;
+  font-size: 0.62rem;
+  margin-top: 5px;
 }
 
 .expandButton {
@@ -296,7 +296,7 @@
   display: inline-flex;
   font-weight: 700;
   gap: 6px;
-  padding: 10px 0;
+  padding: 6px 0;
 }
 
 .spinningIcon {
