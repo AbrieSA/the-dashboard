@@ -1,4 +1,3 @@
-import { AppShellHeader } from "@/components/AppShellHeader";
 import { OverviewLanding } from "@/components/OverviewLanding";
 import { getDashboardSnapshot } from "@/lib/dashboard";
 import type { DashboardGroupView, DashboardRuntimeStatus } from "@/lib/dashboard-types";
@@ -35,7 +34,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <main className="dashboard-app">
-      <AppShellHeader activePage="overview" hasRuntimeError={runtimeStatus === "error"} />
       <div className="dashboard-page shell page-grid">
         <OverviewLanding
           groups={groups}
